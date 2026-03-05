@@ -5,7 +5,7 @@ import { Search } from 'lucide-react';
 export default function Home() {
   return (
     <div>
-      <div className="flex flex-col items-center mt-20 gap-3">
+      <div className="flex flex-col items-center mt-20 gap-4">
         <div className="flex gap-2 text-slate-600 md:text-2xl font-md text-muted-foreground">
           <Image
             src="/logo.svg"
@@ -15,7 +15,7 @@ export default function Home() {
           />
           BD SaaS Zone
         </div>
-        <div className="text-slate-800 font-bold text-6xl text-center">A Database of SaaS products<br/> from Bangladesh</div>
+        <div className="text-slate-800 font-bold text-5xl text-center">A Database of SaaS products<br/> from Bangladesh</div>
         <div className="flex gap-2">
           <div className="flex items-center w-90 p-2 rounded-lg bg-slate-50 border border-slate-300">
             <div className="pl-1">
@@ -25,7 +25,7 @@ export default function Home() {
               <input 
                 type="text" 
                 placeholder="Search Startups" 
-                className="flex-1 bg-transparent px-3 py-1 outline-none"
+                className="flex-1 bg-transparent px-3 outline-none"
               />
             </div>
           </div>
