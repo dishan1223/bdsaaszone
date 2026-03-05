@@ -9,7 +9,7 @@ function LoginForm() {
   
 
   const callbackUrl = searchParams.get("callbackUrl") || "/";
-
+  
   const handleGoogleLogin = async () => {
     await authClient.signIn.social({
       provider: "google",
@@ -44,7 +44,7 @@ function LoginForm() {
   );
 }
 
-// 2. Wrap it in Suspense (Next.js requirement for useSearchParams during build)
+// Wrap in Suspense (Next.js requirement for useSearchParams during build)
 export default function LoginPage() {
   return (
     <Suspense fallback={<div>Loading...</div>}>

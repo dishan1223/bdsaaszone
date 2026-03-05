@@ -9,6 +9,8 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@better-auth/mongo-adapter": "^1.5.3",
+    "axios": "^1.13.6",
     "better-auth": "^1.5.3",
     "lucide-react": "^0.576.0",
     "mongodb": "^7.1.0",
