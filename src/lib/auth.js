@@ -6,6 +6,7 @@ const client = await clientPromise;
 const db = client.db(process.env.DB);
 
 export const auth = betterAuth({
+	baseURL: process.env.BETTER_AUTH_BASE_URL,
   database: mongodbAdapter(db),
   socialProviders: {
     google: {
