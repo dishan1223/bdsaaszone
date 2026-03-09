@@ -5,7 +5,7 @@ import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowLeft, Globe, Tag, Layers, Users, DollarSign } from "lucide-react";
+import { ArrowLeft, Globe, Tag, Layers, Users, DollarSign, Mail } from "lucide-react";
 import LikeButton from "@/components/ui/LikeButton";
 import SitePreview from "@/components/ui/SitePreview";
 
@@ -57,9 +57,9 @@ async function getStartup(slug) {
   try {
     const user = await db.collection("user").findOne(
       { _id: new ObjectId(startup.userId) },
-      { projection: { _id: 1, name: 1, image: 1 } }
+      { projection: { _id: 1, name: 1, image: 1, email: 1 } }
     );
-    if (user) founder = { name: user.name, image: user.image ?? null };
+    if (user) founder = { name: user.name, image: user.image ?? null, email: user.email ?? null };
   } catch {}
 
   return {
@@ -225,9 +225,30 @@ export default async function StartupPage({ params }) {
             <span className="text-sm font-semibold text-blue-700">This startup is for sale</span>
           </div>
           <p className="text-sm text-blue-600 mb-3">The founder is open to acquisition offers.</p>
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-blue-500">Asking price</span>
-            <span className="text-lg font-bold text-blue-700">{startup.askingPrice}</span>
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <div>
+              <span className="text-xs text-blue-500 block mb-0.5">Asking price</span>
+              <span className="text-lg font-bold text-blue-700">{startup.askingPrice}</span>
+            </div>
+            {startup.founder?.email && (
+              <a
+                href={`https://mail.google.com/mail/?view=cm&to=${encodeURIComponent(startup.founder.email)}&su=${encodeURIComponent(`Interested in acquiring ${startup.name}`)}&body=${encodeURIComponent(`Hi ${startup.founder.name?.split(" ")[0] ?? "there"},
+
+I came across ${startup.name} on BD SaaS Zone and I'm interested in discussing an acquisition.
+
+Asking price listed: ${startup.askingPrice}
+
+Looking forward to hearing from you!`)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium transition-colors"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M24 5.457v13.909c0 .904-.732 1.636-1.636 1.636h-3.819V11.73L12 16.64l-6.545-4.91v9.273H1.636A1.636 1.636 0 0 1 0 19.366V5.457c0-2.023 2.309-3.178 3.927-1.964L5.455 4.64 12 9.548l6.545-4.91 1.528-1.145C21.69 2.28 24 3.434 24 5.457z"/>
+                </svg>
+                Contact Founder
+              </a>
+            )}
           </div>
         </div>
       )}
@@ -239,7 +260,26 @@ export default async function StartupPage({ params }) {
             <Users size={15} className="text-green-600" />
             <span className="text-sm font-semibold text-green-700">Seeking a Co-founder</span>
           </div>
-          <p className="text-sm text-green-600">The founder is looking for a co-founder to join this startup.</p>
+          <div className="flex items-center justify-between flex-wrap gap-3 mt-2">
+            <p className="text-sm text-green-600">The founder is looking for a co-founder to join this startup.</p>
+            {startup.founder?.email && (
+              <a
+                href={`https://mail.google.com/mail/?view=cm&to=${encodeURIComponent(startup.founder.email)}&su=${encodeURIComponent(`Interested in co-founding ${startup.name} with you`)}&body=${encodeURIComponent(`Hi ${startup.founder.name?.split(" ")[0] ?? "there"},
+
+I found ${startup.name} on BD SaaS Zone and I'd love to explore the possibility of joining as a co-founder.
+
+Looking forward to connecting!`)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm font-medium transition-colors"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M24 5.457v13.909c0 .904-.732 1.636-1.636 1.636h-3.819V11.73L12 16.64l-6.545-4.91v9.273H1.636A1.636 1.636 0 0 1 0 19.366V5.457c0-2.023 2.309-3.178 3.927-1.964L5.455 4.64 12 9.548l6.545-4.91 1.528-1.145C21.69 2.28 24 3.434 24 5.457z"/>
+                </svg>
+                Contact Founder
+              </a>
+            )}
+          </div>
         </div>
       )}
 
