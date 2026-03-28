@@ -5,9 +5,10 @@ import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowLeft, Globe, Tag, Layers, Users, DollarSign, Mail } from "lucide-react";
+import { ArrowLeft, Globe, Tag, Layers, Users, DollarSign } from "lucide-react";
 import LikeButton from "@/components/ui/LikeButton";
 import SitePreview from "@/components/ui/SitePreview";
+import { TECH_ICONS } from "@/lib/techIcons";
 
 const CATEGORY_LABELS = {
   ai: "AI", productivity: "Productivity", marketing: "Marketing", finance: "Finance",
@@ -18,27 +19,6 @@ const CATEGORY_LABELS = {
 
 const PRODUCT_TYPE_LABELS = {
   free: "Free", subscription: "Subscription Based", one_time: "One Time Purchase",
-};
-
-const TECH_ICONS = {
-  "JavaScript": "javascript","TypeScript": "typescript","Python": "python","Rust": "rust",
-  "Go": "go","Java": "java","Kotlin": "kotlin","Swift": "swift","C": "c","C++": "cplusplus",
-  "C#": "csharp","PHP": "php","Ruby": "ruby","Scala": "scala","Elixir": "elixir",
-  "Haskell": "haskell","Dart": "dart","R": "r","Bash": "bash","Lua": "lua","Perl": "perl",
-  "React": "react","Next.js": "nextjs","Vue.js": "vuejs","Nuxt.js": "nuxtjs",
-  "Angular": "angularjs","Svelte": "svelte","Astro": "astro","Ember.js": "ember",
-  "Tailwind CSS": "tailwindcss","Sass": "sass","Less": "less","Bootstrap": "bootstrap",
-  "Node.js": "nodejs","Express.js": "express","Django": "django","Flask": "flask",
-  "FastAPI": "fastapi","Spring Boot": "spring","Laravel": "laravel","Rails": "rails","NestJS": "nestjs",
-  "PostgreSQL": "postgresql","MySQL": "mysql","SQLite": "sqlite","MongoDB": "mongodb",
-  "Redis": "redis","DynamoDB": "dynamodb","Cassandra": "cassandra","Firebase": "firebase","Supabase": "supabase",
-  "AWS": "amazonwebservices","GCP": "googlecloud","Azure": "azure","Vercel": "vercel",
-  "Netlify": "netlify","Heroku": "heroku","DigitalOcean": "digitalocean","Cloudflare": "cloudflare",
-  "Docker": "docker","Kubernetes": "kubernetes","Terraform": "terraform","Ansible": "ansible","Jenkins": "jenkins",
-  "Auth0": "auth0","Stripe": "stripe","TensorFlow": "tensorflow","PyTorch": "pytorch","Keras": "keras",
-  "Jest": "jest","Cypress": "cypressio","React Native": "react","Flutter": "flutter","Ionic": "ionic",
-  "GraphQL": "graphql","Elasticsearch": "elasticsearch","Nginx": "nginx","Linux": "linux",
-  "Git": "git","GitHub": "github","GitLab": "gitlab","Figma": "figma","Webpack": "webpack","Vite": "vitejs",
 };
 
 const toSlug = (name) =>
@@ -52,7 +32,6 @@ async function getStartup(slug) {
   const startup = startups.find((s) => toSlug(s.name) === slug);
   if (!startup) return null;
 
-  // Fetch founder
   let founder = null;
   try {
     const user = await db.collection("user").findOne(
@@ -112,7 +91,6 @@ export default async function StartupPage({ params }) {
                 className="text-xs font-medium px-2.5 py-1 rounded-full">Seeking Co-founder</span>
             )}
           </div>
-
           <a href={startup.url} target="_blank" rel="noopener noreferrer"
             className="inline-flex items-center gap-1.5 text-sm text-blue-500 hover:text-blue-600 transition-colors">
             <Globe size={13} />
@@ -120,7 +98,6 @@ export default async function StartupPage({ params }) {
           </a>
         </div>
 
-        {/* Likes */}
         <LikeButton startupId={startup._id} initialLikes={startup.likes} initialLiked={initialLiked} />
       </div>
 
@@ -182,17 +159,17 @@ export default async function StartupPage({ params }) {
           <h2 className="text-sm font-semibold text-slate-700 mb-3">Tech Stack</h2>
           <div className="flex flex-wrap gap-2">
             {startup.techStack.map((tech) => {
-              const slug = TECH_ICONS[tech];
+              const iconSlug = TECH_ICONS[tech];
               return (
                 <span key={tech} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-100 border border-slate-200 text-xs font-medium text-slate-700">
-                  {slug && (
+                  {iconSlug && (
                     <Image
-                    src={`https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/${slug}/${slug}-original.svg`}
-                    alt={tech}
-                    width={14}
-                    height={14}
-                    style={{ flexShrink: 0 }}
-                  />
+                      src={`https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/${iconSlug}/${iconSlug}-original.svg`}
+                      alt={tech}
+                      width={14}
+                      height={14}
+                      style={{ flexShrink: 0 }}
+                    />
                   )}
                   {tech}
                 </span>
@@ -232,13 +209,7 @@ export default async function StartupPage({ params }) {
             </div>
             {startup.founder?.email && (
               <a
-                href={`https://mail.google.com/mail/?view=cm&to=${encodeURIComponent(startup.founder.email)}&su=${encodeURIComponent(`Interested in acquiring ${startup.name}`)}&body=${encodeURIComponent(`Hi ${startup.founder.name?.split(" ")[0] ?? "there"},
-
-I came across ${startup.name} on BD SaaS Zone and I'm interested in discussing an acquisition.
-
-Asking price listed: ${startup.askingPrice}
-
-Looking forward to hearing from you!`)}`}
+                href={`https://mail.google.com/mail/?view=cm&to=${encodeURIComponent(startup.founder.email)}&su=${encodeURIComponent(`Interested in acquiring ${startup.name}`)}&body=${encodeURIComponent(`Hi ${startup.founder.name?.split(" ")[0] ?? "there"},\n\nI came across ${startup.name} on BD SaaS Zone and I'm interested in discussing an acquisition.\n\nAsking price listed: ${startup.askingPrice}\n\nLooking forward to hearing from you!`)}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium transition-colors"
@@ -264,11 +235,7 @@ Looking forward to hearing from you!`)}`}
             <p className="text-sm text-green-600">The founder is looking for a co-founder to join this startup.</p>
             {startup.founder?.email && (
               <a
-                href={`https://mail.google.com/mail/?view=cm&to=${encodeURIComponent(startup.founder.email)}&su=${encodeURIComponent(`Interested in co-founding ${startup.name} with you`)}&body=${encodeURIComponent(`Hi ${startup.founder.name?.split(" ")[0] ?? "there"},
-
-I found ${startup.name} on BD SaaS Zone and I'd love to explore the possibility of joining as a co-founder.
-
-Looking forward to connecting!`)}`}
+                href={`https://mail.google.com/mail/?view=cm&to=${encodeURIComponent(startup.founder.email)}&su=${encodeURIComponent(`Interested in co-founding ${startup.name} with you`)}&body=${encodeURIComponent(`Hi ${startup.founder.name?.split(" ")[0] ?? "there"},\n\nI found ${startup.name} on BD SaaS Zone and I'd love to explore the possibility of joining as a co-founder.\n\nLooking forward to connecting!`)}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm font-medium transition-colors"

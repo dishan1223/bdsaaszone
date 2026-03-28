@@ -1,9 +1,13 @@
 "use client";
 import Image from "next/image";
 import Link from "next/link";
-import { Search, Heart, TrendingUp, ChevronRight, ChevronDown } from "lucide-react";
+import { Search, Heart, TrendingUp, ChevronRight, ChevronDown, LayoutDashboard } from "lucide-react";
 import { useState, useEffect } from "react";
+import { authClient } from "@/lib/auth-client";
 import axios from "axios";
+
+// NOTE: take all the components to their own files
+
 
 const CATEGORY_LABELS = {
   ai: "AI", productivity: "Productivity", marketing: "Marketing", finance: "Finance",
@@ -96,9 +100,57 @@ function StartupMobileCard({ startup, idx }) {
   );
 }
 
+// Dashboard Button 
+// Shows only when user is authenticated. Sits in the top-right corner,
+// fixed so it's always reachable without scrolling.
+function DashboardButton({ user }) {
+  const [hovered, setHovered] = useState(false);
+
+  return (
+    <Link href="/dashboard">
+      <div
+        className="fixed top-4 right-4 z-50 flex items-center gap-2.5 group"
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+      >
+        {/* Tooltip label — slides in from the right on hover */}
+        <div
+          className="flex flex-col items-end overflow-hidden transition-all duration-200 ease-out"
+          style={{
+            maxWidth: hovered ? "160px" : "0px",
+            opacity: hovered ? 1 : 0,
+          }}
+        >
+          <span className="text-xs font-semibold text-slate-700 whitespace-nowrap pr-1">My Dashboard</span>
+          <span className="text-xs text-slate-400 whitespace-nowrap pr-1 truncate max-w-[140px]">
+            {user?.name ?? user?.email ?? ""}
+          </span>
+        </div>
+
+        {/* Avatar / icon pill */}
+        <div className="flex items-center justify-center w-9 h-9 rounded-full bg-white border border-slate-200 shadow-sm hover:shadow-md hover:border-slate-300 transition-all duration-200">
+          {user?.image ? (
+            <img
+              src={user.image}
+              alt={user.name ?? "User"}
+              className="w-full h-full rounded-full object-cover"
+            />
+          ) : (
+            <LayoutDashboard size={16} className="text-slate-600" />
+          )}
+        </div>
+      </div>
+    </Link>
+  );
+}
+
 const PAGE_SIZE = 50;
 
 export default function Home() {
+  const { data: session } = authClient.useSession();
+  const isLoggedIn = !!session?.user;
+  const user = session?.user;
+
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("all");
   const [startups, setStartups] = useState([]);
@@ -114,7 +166,6 @@ export default function Home() {
       .finally(() => setLoading(false));
   }, []);
 
-  // Reset visible count when filters change
   useEffect(() => {
     setVisibleCount(PAGE_SIZE);
   }, [query, category]);
@@ -132,7 +183,10 @@ export default function Home() {
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6">
 
-      {/* ── Hero ─────────────────────────────────────────────────────────── */}
+      {/*Dashboard Button (authenticated users only)*/}
+      {isLoggedIn && <DashboardButton user={session?.user} />}
+
+      {/*Hero*/}
       <div className="flex flex-col items-center mt-12 sm:mt-20 gap-4">
         <div className="flex gap-2 text-slate-600 text-base sm:text-2xl font-md">
           <Image src="/logo.svg" alt="logo" width={20} height={20} />
@@ -186,7 +240,6 @@ export default function Home() {
       {/* ── All Startups ─────────────────────────────────────────────────── */}
       <div className="mt-10 sm:mt-12 mb-16">
 
-        {/* Section header + category filter */}
         <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
           <div className="flex items-center gap-2">
             <TrendingUp size={15} className="text-slate-500" />
@@ -196,7 +249,6 @@ export default function Home() {
             )}
           </div>
 
-          {/* Category dropdown */}
           <div className="relative">
             <select
               value={category}
@@ -295,7 +347,6 @@ export default function Home() {
               ))}
             </div>
 
-            {/* Show more button */}
             {hasMore && (
               <div className="flex justify-center mt-6">
                 <button
