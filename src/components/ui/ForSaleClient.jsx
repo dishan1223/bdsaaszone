@@ -3,13 +3,8 @@
 import { useState, useMemo } from "react";
 import Link from "next/link";
 import { ArrowLeft, Heart, DollarSign, SlidersHorizontal, X } from "lucide-react";
+import {CATEGORY_LABELS} from "@/constants/constants.js"
 
-const CATEGORY_LABELS = {
-  ai: "AI", productivity: "Productivity", marketing: "Marketing", finance: "Finance",
-  hr: "HR & Recruitment", ecommerce: "E-Commerce", education: "Education",
-  healthcare: "Healthcare", "developer-tools": "Developer Tools", analytics: "Analytics",
-  communication: "Communication", design: "Design", security: "Security", other: "Other",
-};
 
 const toSlug = (name) =>
   name?.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") ?? "";

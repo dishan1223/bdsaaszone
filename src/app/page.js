@@ -1,23 +1,17 @@
 "use client";
 import Image from "next/image";
 import Link from "next/link";
-import { Search, Heart, TrendingUp, ChevronRight, ChevronDown, LayoutDashboard } from "lucide-react";
-import { useState, useEffect } from "react";
+import { Search, Heart, TrendingUp, ChevronRight, ChevronDown, LayoutDashboard, Users, X } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
 import { authClient } from "@/lib/auth-client";
 import axios from "axios";
+import {CATEGORY_LABELS} from "@/constants/constants.js"
 
-// NOTE: take all the components to their own files
-
-
-const CATEGORY_LABELS = {
-  ai: "AI", productivity: "Productivity", marketing: "Marketing", finance: "Finance",
-  hr: "HR & Recruitment", ecommerce: "E-Commerce", education: "Education",
-  healthcare: "Healthcare", "developer-tools": "Developer Tools", analytics: "Analytics",
-  communication: "Communication", design: "Design", security: "Security", other: "Other",
-};
 
 const toSlug = (name) =>
   name?.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") ?? "";
+
+// ── Sub-components ─────────────────────────────────────────────────────────────
 
 function Avatar({ src, name, size = 28 }) {
   const initials = name ? name.split(" ").map((w) => w[0]).join("").toUpperCase().slice(0, 2) : "?";
@@ -29,14 +23,12 @@ function Avatar({ src, name, size = 28 }) {
 function ForSaleBadge() {
   return (
     <span style={{ background: "#eff6ff", color: "#3b82f6", border: "1px solid #bfdbfe" }}
-      className="text-xs font-medium px-2 py-0.5 rounded-full w-fit">
-      For Sale
-    </span>
+      className="text-xs font-medium px-2 py-0.5 rounded-full w-fit">For Sale</span>
   );
 }
 
-function LogoSquare({ src, name }) {
-  const style = { width: 32, height: 32, flexShrink: 0 };
+function LogoSquare({ src, name, size = 32 }) {
+  const style = { width: size, height: size, flexShrink: 0 };
   if (src) return <img src={src} alt={name} style={style} className="rounded-lg object-cover border border-slate-200" />;
   return (
     <div style={style} className="rounded-lg bg-slate-100 border border-slate-200 flex items-center justify-center text-xs font-bold text-slate-500">
@@ -80,9 +72,7 @@ function StartupMobileCard({ startup, idx }) {
           </div>
           {startup.description && (
             <p className="text-xs text-slate-400 mt-0.5 truncate">
-              {startup.description.length > 37
-                ? startup.description.slice(0, 37) + "..."
-                : startup.description}
+              {startup.description.length > 37 ? startup.description.slice(0, 37) + "..." : startup.description}
             </p>
           )}
           <div className="flex items-center gap-2 mt-0.5 flex-wrap">
@@ -100,41 +90,27 @@ function StartupMobileCard({ startup, idx }) {
   );
 }
 
-// Dashboard Button 
-// Shows only when user is authenticated. Sits in the top-right corner,
-// fixed so it's always reachable without scrolling.
 function DashboardButton({ user }) {
   const [hovered, setHovered] = useState(false);
-
   return (
     <Link href="/dashboard">
       <div
-        className="fixed top-4 right-4 z-50 flex items-center gap-2.5 group"
+        className="fixed top-4 right-4 z-50 flex items-center gap-2.5"
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
       >
-        {/* Tooltip label — slides in from the right on hover */}
         <div
           className="flex flex-col items-end overflow-hidden transition-all duration-200 ease-out"
-          style={{
-            maxWidth: hovered ? "160px" : "0px",
-            opacity: hovered ? 1 : 0,
-          }}
+          style={{ maxWidth: hovered ? "160px" : "0px", opacity: hovered ? 1 : 0 }}
         >
           <span className="text-xs font-semibold text-slate-700 whitespace-nowrap pr-1">My Dashboard</span>
           <span className="text-xs text-slate-400 whitespace-nowrap pr-1 truncate max-w-[140px]">
             {user?.name ?? user?.email ?? ""}
           </span>
         </div>
-
-        {/* Avatar / icon pill */}
         <div className="flex items-center justify-center w-9 h-9 rounded-full bg-white border border-slate-200 shadow-sm hover:shadow-md hover:border-slate-300 transition-all duration-200">
           {user?.image ? (
-            <img
-              src={user.image}
-              alt={user.name ?? "User"}
-              className="w-full h-full rounded-full object-cover"
-            />
+            <img src={user.image} alt={user.name ?? "User"} className="w-full h-full rounded-full object-cover" />
           ) : (
             <LayoutDashboard size={16} className="text-slate-600" />
           )}
@@ -144,12 +120,99 @@ function DashboardButton({ user }) {
   );
 }
 
+// ── Unified search dropdown ────────────────────────────────────────────────────
+function SearchDropdown({ query, startups, onClose }) {
+  const q = query.toLowerCase().trim();
+
+  // Match startups
+  const matchedStartups = startups
+    .filter((s) => s.name?.toLowerCase().includes(q) || s.description?.toLowerCase().includes(q))
+    .slice(0, 4);
+
+  // Deduplicate founders by userId
+  const founderMap = {};
+  for (const s of startups) {
+    if (!s.founder || !s.userId) continue;
+    if (!founderMap[s.userId]) {
+      founderMap[s.userId] = { ...s.founder, userId: s.userId, startupCount: 0 };
+    }
+    founderMap[s.userId].startupCount += 1;
+  }
+  const matchedFounders = Object.values(founderMap)
+    .filter((f) => f.name?.toLowerCase().includes(q))
+    .slice(0, 3);
+
+  const hasResults = matchedStartups.length > 0 || matchedFounders.length > 0;
+
+  return (
+    <div className="absolute top-full left-0 right-0 mt-1.5 bg-white border border-slate-200 rounded-xl shadow-lg overflow-hidden z-50">
+      {!hasResults && (
+        <div className="px-4 py-6 text-center text-sm text-slate-400">No results for "{query}"</div>
+      )}
+
+      {matchedStartups.length > 0 && (
+        <div>
+          <div className="px-3 pt-3 pb-1.5">
+            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Startups</span>
+          </div>
+          {matchedStartups.map((s) => (
+            <Link key={s._id} href={`/startups/${toSlug(s.name)}`} onClick={onClose}>
+              <div className="flex items-center gap-3 px-3 py-2.5 hover:bg-slate-50 transition-colors cursor-pointer">
+                <LogoSquare src={s.logoUrl} name={s.name} size={30} />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium text-slate-800 truncate">{s.name}</span>
+                    {s.forSale && <ForSaleBadge />}
+                  </div>
+                  <span className="text-xs text-slate-400 truncate block">
+                    {CATEGORY_LABELS[s.category] ?? s.category}
+                  </span>
+                </div>
+                <div className="flex items-center gap-1 text-slate-400 shrink-0">
+                  <Heart size={11} />
+                  <span className="text-xs tabular-nums">{s.likes ?? 0}</span>
+                </div>
+              </div>
+            </Link>
+          ))}
+        </div>
+      )}
+
+      {matchedFounders.length > 0 && (
+        <div className={matchedStartups.length > 0 ? "border-t border-slate-100" : ""}>
+          <div className="px-3 pt-3 pb-1.5">
+            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Founders</span>
+          </div>
+          {matchedFounders.map((f) => (
+            <Link key={f.userId} href={`/founder/${f.userId}`} onClick={onClose}>
+              <div className="flex items-center gap-3 px-3 py-2.5 hover:bg-slate-50 transition-colors cursor-pointer">
+                <Avatar src={f.image} name={f.name} size={30} />
+                <div className="flex-1 min-w-0">
+                  <span className="text-sm font-medium text-slate-800 block truncate">{f.name}</span>
+                  <span className="text-xs text-slate-400">
+                    {f.startupCount} {f.startupCount === 1 ? "startup" : "startups"}
+                  </span>
+                </div>
+                <span className="text-xs text-slate-400 shrink-0">View profile →</span>
+              </div>
+            </Link>
+          ))}
+        </div>
+      )}
+
+      {/* Footer hint */}
+      <div className="px-3 py-2 border-t border-slate-100 bg-slate-50">
+        <span className="text-xs text-slate-400">Press Enter to search all results</span>
+      </div>
+    </div>
+  );
+}
+
 const PAGE_SIZE = 50;
 
 export default function Home() {
   const { data: session } = authClient.useSession();
   const isLoggedIn = !!session?.user;
-  const user = session?.user;
 
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("all");
@@ -157,6 +220,10 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  const [searchFocused, setSearchFocused] = useState(false);
+  const [submittedQuery, setSubmittedQuery] = useState(""); // what was last "searched"
+
+  const searchRef = useRef(null);
 
   useEffect(() => {
     axios
@@ -168,10 +235,43 @@ export default function Home() {
 
   useEffect(() => {
     setVisibleCount(PAGE_SIZE);
-  }, [query, category]);
+  }, [submittedQuery, category]);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handler = (e) => {
+      if (!searchRef.current?.contains(e.target)) setSearchFocused(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const handleSearchKeyDown = (e) => {
+    if (e.key === "Enter") {
+      setSubmittedQuery(query);
+      setSearchFocused(false);
+    }
+    if (e.key === "Escape") {
+      setSearchFocused(false);
+    }
+  };
+
+  const clearSearch = () => {
+    setQuery("");
+    setSubmittedQuery("");
+    setSearchFocused(false);
+  };
+
+  // Table/card filtering uses submittedQuery (what user pressed Enter on)
+  // Dropdown uses live `query`
+  const activeQuery = submittedQuery || "";
 
   const filtered = startups.filter((s) => {
-    const matchesQuery = s.name?.toLowerCase().includes(query.toLowerCase());
+    const q = activeQuery.toLowerCase();
+    const matchesQuery = !q ||
+      s.name?.toLowerCase().includes(q) ||
+      s.description?.toLowerCase().includes(q) ||
+      s.founder?.name?.toLowerCase().includes(q);
     const matchesCategory = category === "all" || s.category === category;
     return matchesQuery && matchesCategory;
   });
@@ -179,14 +279,14 @@ export default function Home() {
   const visible = filtered.slice(0, visibleCount);
   const hasMore = filtered.length > visibleCount;
   const forSale = startups.filter((s) => s.forSale);
+  const showDropdown = searchFocused && query.trim().length >= 1;
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6">
 
-      {/*Dashboard Button (authenticated users only)*/}
       {isLoggedIn && <DashboardButton user={session?.user} />}
 
-      {/*Hero*/}
+      {/* ── Hero ──────────────────────────────────────────────────────────── */}
       <div className="flex flex-col items-center mt-12 sm:mt-20 gap-4">
         <div className="flex gap-2 text-slate-600 text-base sm:text-2xl font-md">
           <Image src="/logo.svg" alt="logo" width={20} height={20} />
@@ -198,29 +298,61 @@ export default function Home() {
           <span className="sm:hidden"> </span>
           from Bangladesh
         </div>
+
+        {/* Search + Add */}
         <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-          <div className="flex items-center flex-1 sm:flex-none sm:w-80 p-2 rounded-lg bg-slate-50 border border-slate-300">
-            <div className="pl-1 shrink-0">
-              <Search size={18} color="#7C7D7E" strokeWidth={2.5} />
+          {/* Search wrapper — relative for dropdown */}
+          <div ref={searchRef} className="relative flex-1 sm:flex-none sm:w-96">
+            <div className="flex items-center p-2 rounded-lg bg-slate-50 border border-slate-300 focus-within:border-slate-500 transition-colors">
+              <div className="pl-1 shrink-0">
+                <Search size={18} color="#7C7D7E" strokeWidth={2.5} />
+              </div>
+              <input
+                type="text"
+                placeholder="Search startups & founders..."
+                value={query}
+                onChange={(e) => { setQuery(e.target.value); setSearchFocused(true); }}
+                onFocus={() => setSearchFocused(true)}
+                onKeyDown={handleSearchKeyDown}
+                className="flex-1 bg-transparent px-3 outline-none text-sm"
+              />
+              {query && (
+                <button onClick={clearSearch} className="shrink-0 text-slate-400 hover:text-slate-600 transition-colors pr-1">
+                  <X size={15} />
+                </button>
+              )}
             </div>
-            <input
-              type="text"
-              placeholder="Search Startups"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              className="flex-1 bg-transparent px-3 outline-none text-sm"
-            />
+
+            {/* Live dropdown */}
+            {showDropdown && (
+              <SearchDropdown
+                query={query}
+                startups={startups}
+                onClose={() => { setSearchFocused(false); setSubmittedQuery(query); }}
+              />
+            )}
           </div>
+
           <Link href="/new" className="w-full sm:w-auto">
             <button className="btn border-none w-full sm:w-auto bg-slate-900 rounded-lg text-slate-50">
               + Add Startup
             </button>
           </Link>
         </div>
+
+        {/* Active search indicator */}
+        {activeQuery && (
+          <div className="flex items-center gap-2 text-sm text-slate-500">
+            <span>Results for <span className="font-medium text-slate-700">"{activeQuery}"</span></span>
+            <button onClick={clearSearch} className="flex items-center gap-1 text-xs text-slate-400 hover:text-slate-600 transition-colors border border-slate-200 rounded-full px-2 py-0.5">
+              <X size={11} /> Clear
+            </button>
+          </div>
+        )}
       </div>
 
-      {/* ── For Sale ─────────────────────────────────────────────────────── */}
-      {!loading && forSale.length > 0 && (
+      {/* ── For Sale ──────────────────────────────────────────────────────── */}
+      {!loading && forSale.length > 0 && !activeQuery && (
         <div className="mt-10 sm:mt-14">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
@@ -237,18 +369,18 @@ export default function Home() {
         </div>
       )}
 
-      {/* ── All Startups ─────────────────────────────────────────────────── */}
+      {/* ── All Startups ──────────────────────────────────────────────────── */}
       <div className="mt-10 sm:mt-12 mb-16">
-
         <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
           <div className="flex items-center gap-2">
             <TrendingUp size={15} className="text-slate-500" />
-            <span className="text-sm font-semibold text-slate-700">All Startups</span>
+            <span className="text-sm font-semibold text-slate-700">
+              {activeQuery ? "Search Results" : "All Startups"}
+            </span>
             {!loading && (
               <span className="text-xs text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">{filtered.length}</span>
             )}
           </div>
-
           <div className="relative">
             <select
               value={category}
@@ -265,15 +397,17 @@ export default function Home() {
         </div>
 
         {loading && <div className="flex justify-center py-16 text-slate-400 text-sm">Loading...</div>}
-
-        {error && (
-          <div className="text-sm text-red-500 bg-red-50 border border-red-200 rounded-lg px-4 py-3">{error}</div>
-        )}
+        {error && <div className="text-sm text-red-500 bg-red-50 border border-red-200 rounded-lg px-4 py-3">{error}</div>}
 
         {!loading && !error && filtered.length === 0 && (
           <div className="flex flex-col items-center py-16 gap-2 text-slate-400">
             <span className="text-3xl">🔍</span>
-            <span className="text-sm">No startups found.</span>
+            <span className="text-sm">No startups found{activeQuery ? ` for "${activeQuery}"` : ""}.</span>
+            {activeQuery && (
+              <button onClick={clearSearch} className="text-xs text-slate-500 hover:text-slate-700 underline mt-1">
+                Clear search
+              </button>
+            )}
           </div>
         )}
 
@@ -309,18 +443,25 @@ export default function Home() {
                             </div>
                             {startup.description && (
                               <span className="text-xs text-slate-400 leading-relaxed">
-                                {startup.description.length > 37
-                                  ? startup.description.slice(0, 37) + "..."
-                                  : startup.description}
+                                {startup.description.length > 37 ? startup.description.slice(0, 37) + "..." : startup.description}
                               </span>
                             )}
                           </div>
                         </div>
                       </td>
                       <td className="py-3 align-top pt-4">
-                        <div className="flex items-center gap-2">
+                        {/* Founder is clickable — goes to founder profile */}
+                        <div
+                          className="flex items-center gap-2 w-fit"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            window.location.href = `/founder/${startup.userId}`;
+                          }}
+                        >
                           <Avatar src={startup.founder?.image} name={startup.founder?.name} size={28} />
-                          <span className="text-sm text-slate-600">{startup.founder?.name ?? "Unknown"}</span>
+                          <span className="text-sm text-slate-600 hover:text-slate-900 hover:underline transition-colors cursor-pointer">
+                            {startup.founder?.name ?? "Unknown"}
+                          </span>
                         </div>
                       </td>
                       <td className="py-3 align-top pt-4">

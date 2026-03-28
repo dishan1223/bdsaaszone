@@ -8,18 +8,10 @@ import Image from "next/image";
 import { ArrowLeft, Globe, Tag, Layers, Users, DollarSign } from "lucide-react";
 import LikeButton from "@/components/ui/LikeButton";
 import SitePreview from "@/components/ui/SitePreview";
-import { TECH_ICONS } from "@/lib/techIcons";
+import { TECH_ICONS } from "@/constants/constants.js";
+import {CATEGORY_LABELS,PRODUCT_TYPE_LABELS} from "@/constants/constants.js"
 
-const CATEGORY_LABELS = {
-  ai: "AI", productivity: "Productivity", marketing: "Marketing", finance: "Finance",
-  hr: "HR & Recruitment", ecommerce: "E-Commerce", education: "Education",
-  healthcare: "Healthcare", "developer-tools": "Developer Tools", analytics: "Analytics",
-  communication: "Communication", design: "Design", security: "Security", other: "Other",
-};
 
-const PRODUCT_TYPE_LABELS = {
-  free: "Free", subscription: "Subscription Based", one_time: "One Time Purchase",
-};
 
 const toSlug = (name) =>
   name?.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") ?? "";

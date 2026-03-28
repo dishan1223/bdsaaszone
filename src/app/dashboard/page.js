@@ -5,32 +5,27 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   LogOut, Plus, Trash2, ExternalLink, Heart,
-  ArrowLeft, Pencil, X, ChevronDown
+  ArrowLeft, Pencil, X, ChevronDown, TrendingUp,
+  Globe, Tag, DollarSign, Users, BarChart2,
 } from "lucide-react";
 import axios from "axios";
 import { authClient } from "@/lib/auth-client";
-import { TechIcon } from "@/lib/techIcons";
+import { TechIcon } from "@/constants/constants.js";
+import {CATEGORY_LABELS} from "@/constants/constants.js";
 
-const CATEGORY_LABELS = {
-  ai: "AI", productivity: "Productivity", marketing: "Marketing", finance: "Finance",
-  hr: "HR & Recruitment", ecommerce: "E-Commerce", education: "Education",
-  healthcare: "Healthcare", "developer-tools": "Developer Tools", analytics: "Analytics",
-  communication: "Communication", design: "Design", security: "Security", other: "Other",
-};
 
 const PRODUCT_TYPE_LABELS = {
-  free: "Free",
-  subscription: "Subscription",
-  one_time: "One-time",
+  free: "Free", subscription: "Subscription", one_time: "One-time",
 };
 
 const toSlug = (name) =>
   name?.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") ?? "";
 
-function LogoSquare({ src, name, size = 40 }) {
+// ── Small helpers ──────────────────────────────────────────────────────────────
+
+function LogoSquare({ src, name, size = 44 }) {
   const style = { width: size, height: size, flexShrink: 0 };
-  if (src)
-    return <img src={src} alt={name} style={style} className="rounded-xl object-cover border border-slate-200" />;
+  if (src) return <img src={src} alt={name} style={style} className="rounded-xl object-cover border border-slate-200" />;
   return (
     <div style={style} className="rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center text-sm font-bold text-slate-500">
       {(name ?? "??").slice(0, 2).toUpperCase()}
@@ -40,17 +35,62 @@ function LogoSquare({ src, name, size = 40 }) {
 
 function Badge({ children, color = "slate" }) {
   const styles = {
-    slate: "bg-slate-100 text-slate-600",
-    blue: "bg-blue-50 text-blue-600 border border-blue-100",
+    slate: "bg-slate-100 text-slate-500",
+    blue:  "bg-blue-50 text-blue-600 border border-blue-100",
     green: "bg-green-50 text-green-600 border border-green-100",
+    amber: "bg-amber-50 text-amber-600 border border-amber-100",
   };
   return (
-    <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${styles[color]}`}>
+    <span className={`text-xs font-medium px-2 py-0.5 rounded-full whitespace-nowrap ${styles[color]}`}>
       {children}
     </span>
   );
 }
 
+// ── Stats bar ──────────────────────────────────────────────────────────────────
+function StatsBar({ startups }) {
+  const totalLikes    = startups.reduce((acc, s) => acc + (s.likes ?? 0), 0);
+  const forSaleCount  = startups.filter((s) => s.forSale).length;
+  const cofounderCount = startups.filter((s) => s.seekingCofounder).length;
+  const mostLiked     = [...startups].sort((a, b) => (b.likes ?? 0) - (a.likes ?? 0))[0];
+
+  const stats = [
+    { icon: <BarChart2 size={15} className="text-slate-400" />, label: "Total startups", value: startups.length },
+    { icon: <Heart size={15} className="text-rose-400" />,      label: "Total likes",    value: totalLikes },
+    { icon: <DollarSign size={15} className="text-blue-400" />, label: "Listed for sale", value: forSaleCount },
+    { icon: <Users size={15} className="text-green-400" />,     label: "Seeking co-founder", value: cofounderCount },
+  ];
+
+  return (
+    <div className="flex flex-col gap-3 mb-8">
+      {/* Stat pills */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {stats.map((s) => (
+          <div key={s.label} className="flex flex-col gap-1.5 p-4 rounded-xl bg-white border border-slate-200">
+            <div className="flex items-center gap-1.5">
+              {s.icon}
+              <span className="text-xs text-slate-400">{s.label}</span>
+            </div>
+            <span className="text-2xl font-bold text-slate-800 tabular-nums">{s.value}</span>
+          </div>
+        ))}
+      </div>
+
+      {/* Most liked callout */}
+      {mostLiked && mostLiked.likes > 0 && (
+        <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-blue-50 border border-blue-100">
+          <Heart size={14} className="text-blue-400 shrink-0" />
+          <span className="text-xs text-blue-600">
+            <span className="font-semibold">{mostLiked.name}</span> is your most liked startup with{" "}
+            <span className="font-semibold">{mostLiked.likes}</span> {mostLiked.likes === 1 ? "like" : "likes"}.
+          </span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Delete modal ───────────────────────────────────────────────────────────────
 function DeleteModal({ startup, onConfirm, onCancel, loading }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -60,10 +100,10 @@ function DeleteModal({ startup, onConfirm, onCancel, loading }) {
           <div className="flex flex-col gap-1">
             <h3 className="text-base font-semibold text-slate-800">Delete startup?</h3>
             <p className="text-sm text-slate-500">
-              <span className="font-medium text-slate-700">{startup.name}</span> will be permanently removed.
+              <span className="font-medium text-slate-700">{startup.name}</span> will be permanently removed. This cannot be undone.
             </p>
           </div>
-          <button onClick={onCancel} className="text-slate-400 hover:text-slate-600 transition-colors ml-4 mt-0.5">
+          <button onClick={onCancel} className="text-slate-400 hover:text-slate-600 transition-colors ml-4 mt-0.5 shrink-0">
             <X size={18} />
           </button>
         </div>
@@ -80,14 +120,19 @@ function DeleteModal({ startup, onConfirm, onCancel, loading }) {
   );
 }
 
+// ── Startup card ───────────────────────────────────────────────────────────────
 function StartupCard({ startup, onDeleteClick }) {
   const slug = toSlug(startup.name);
+  const createdAt = startup.createdAt
+    ? new Date(startup.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })
+    : null;
 
   return (
     <div className="flex flex-col gap-3 p-4 rounded-xl bg-white border border-slate-200 hover:border-slate-300 hover:shadow-sm transition-all">
-      {/* Top row */}
+
+      {/* Top row: logo + name + badges */}
       <div className="flex items-start gap-3">
-        <LogoSquare src={startup.logoUrl} name={startup.name} size={44} />
+        <LogoSquare src={startup.logoUrl} name={startup.name} />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-sm font-semibold text-slate-800 leading-tight">{startup.name}</span>
@@ -98,51 +143,89 @@ function StartupCard({ startup, onDeleteClick }) {
             {startup.description}
           </p>
         </div>
+        {/* Likes counter */}
+        <div className="flex flex-col items-center gap-0.5 shrink-0 ml-1">
+          <Heart size={14} className={startup.likes > 0 ? "text-rose-400" : "text-slate-300"} />
+          <span className="text-xs font-semibold tabular-nums text-slate-600">{startup.likes ?? 0}</span>
+        </div>
       </div>
 
-      {/* Meta */}
+      {/* Meta row */}
       <div className="flex items-center gap-2 flex-wrap">
-        <Badge>{CATEGORY_LABELS[startup.category] ?? startup.category}</Badge>
-        <Badge>{PRODUCT_TYPE_LABELS[startup.productType] ?? startup.productType}</Badge>
-        <div className="flex items-center gap-1 text-slate-400 ml-auto">
-          <Heart size={12} />
-          <span className="text-xs tabular-nums">{startup.likes ?? 0}</span>
+        <div className="flex items-center gap-1 text-slate-400">
+          <Tag size={11} />
+          <span className="text-xs">{CATEGORY_LABELS[startup.category] ?? startup.category}</span>
         </div>
+        <span className="text-slate-200 text-xs">·</span>
+        <Badge>{PRODUCT_TYPE_LABELS[startup.productType] ?? startup.productType}</Badge>
+
+        {startup.forSale && startup.askingPrice && (
+          <>
+            <span className="text-slate-200 text-xs">·</span>
+            <div className="flex items-center gap-1 text-blue-500">
+              <DollarSign size={11} />
+              <span className="text-xs font-medium">{startup.askingPrice}</span>
+            </div>
+          </>
+        )}
+
+        {startup.subscriptions?.filter(s => s.plan).length > 0 && (
+          <>
+            <span className="text-slate-200 text-xs">·</span>
+            <span className="text-xs text-slate-400">
+              {startup.subscriptions.filter(s => s.plan).length} plan{startup.subscriptions.filter(s => s.plan).length > 1 ? "s" : ""}
+            </span>
+          </>
+        )}
+
+        {createdAt && (
+          <span className="text-xs text-slate-300 ml-auto">{createdAt}</span>
+        )}
+      </div>
+
+      {/* URL */}
+      <div className="flex items-center gap-1.5 text-slate-400">
+        <Globe size={11} className="shrink-0" />
+        <a href={startup.url} target="_blank" rel="noopener noreferrer"
+          className="text-xs truncate hover:text-slate-600 transition-colors">
+          {startup.url?.replace(/^https?:\/\//, "")}
+        </a>
       </div>
 
       {/* Tech stack */}
       {startup.techStack?.length > 0 && (
         <div className="flex gap-1.5 flex-wrap">
-          {startup.techStack.slice(0, 5).map((t) => (
+          {startup.techStack.slice(0, 6).map((t) => (
             <span key={t} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-100 border border-slate-200 text-xs font-medium text-slate-600">
-              <TechIcon name={t} size={13} />
+              <TechIcon name={t} size={12} />
               {t}
             </span>
           ))}
-          {startup.techStack.length > 5 && (
-            <span className="text-xs text-slate-400 self-center">+{startup.techStack.length - 5} more</span>
+          {startup.techStack.length > 6 && (
+            <span className="text-xs text-slate-400 self-center">+{startup.techStack.length - 6} more</span>
           )}
         </div>
       )}
 
       {/* Actions */}
-      <div className="flex items-center gap-2 pt-1 border-t border-slate-100">
+      <div className="flex items-center gap-3 pt-2 border-t border-slate-100">
         <a href={startup.url} target="_blank" rel="noopener noreferrer"
-          className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-700 transition-colors">
-          <ExternalLink size={12} /> Visit
+          className="flex items-center gap-1 text-xs text-slate-400 hover:text-slate-600 transition-colors">
+          <ExternalLink size={11} /> Visit site
         </a>
         <Link href={`/startups/${slug}`}
-          className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-700 transition-colors">
-          View page
+          className="flex items-center gap-1 text-xs text-slate-400 hover:text-slate-600 transition-colors">
+          <TrendingUp size={11} /> View listing
         </Link>
+
         <div className="flex items-center gap-2 ml-auto">
-          <Link href={`/startups/${slug}/edit`}
-            className="flex items-center gap-1.5 text-xs text-slate-600 bg-slate-50 border border-slate-200 hover:bg-slate-100 hover:border-slate-300 transition-all px-3 py-1.5 rounded-lg">
-            <Pencil size={12} /> Edit
+          <Link href={`/startups/edit/${slug}`}
+            className="flex items-center gap-1.5 text-xs text-slate-600 bg-slate-50 border border-slate-200 hover:bg-slate-100 hover:border-slate-300 transition-all px-3 py-1.5 rounded-lg font-medium">
+            <Pencil size={11} /> Edit
           </Link>
           <button onClick={() => onDeleteClick(startup)}
-            className="flex items-center gap-1.5 text-xs text-red-500 bg-red-50 border border-red-100 hover:bg-red-100 hover:border-red-200 transition-all px-3 py-1.5 rounded-lg">
-            <Trash2 size={12} /> Delete
+            className="flex items-center gap-1.5 text-xs text-red-500 bg-red-50 border border-red-100 hover:bg-red-100 hover:border-red-200 transition-all px-3 py-1.5 rounded-lg font-medium">
+            <Trash2 size={11} /> Delete
           </button>
         </div>
       </div>
@@ -150,6 +233,7 @@ function StartupCard({ startup, onDeleteClick }) {
   );
 }
 
+// ── Main ───────────────────────────────────────────────────────────────────────
 export default function DashboardPage() {
   const router = useRouter();
   const { data: session, isPending: sessionLoading } = authClient.useSession();
@@ -228,7 +312,7 @@ export default function DashboardPage() {
         </Link>
 
         {/* Profile card */}
-        <div className="flex items-center gap-4 p-5 rounded-2xl bg-white border border-slate-200 mb-8">
+        <div className="flex items-center gap-4 p-5 rounded-2xl bg-white border border-slate-200 mb-6">
           <div className="shrink-0">
             {user.image ? (
               <img src={user.image} alt={user.name} className="w-14 h-14 rounded-full object-cover ring-2 ring-slate-100" />
@@ -239,30 +323,39 @@ export default function DashboardPage() {
             )}
           </div>
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
-              <Image src="/logo.svg" alt="logo" width={13} height={13} />
+            <div className="flex items-center gap-1.5 mb-0.5">
+              <Image src="/logo.svg" alt="logo" width={12} height={12} />
               <span className="text-xs text-slate-400">BD SaaS Zone</span>
             </div>
-            <h1 className="text-lg font-bold text-slate-800 mt-0.5 truncate">{user.name}</h1>
+            <h1 className="text-lg font-bold text-slate-800 truncate">{user.name}</h1>
             <p className="text-sm text-slate-400 truncate">{user.email}</p>
           </div>
           <button
             onClick={handleLogout}
             disabled={loggingOut}
-            className="flex items-center gap-2 text-sm text-slate-500 border border-slate-200 hover:border-slate-300 hover:bg-slate-50 hover:text-slate-700 transition-all px-3.5 py-2 rounded-lg shrink-0 disabled:opacity-60"
+            className="flex items-center gap-2 text-sm text-slate-500 border border-slate-200 hover:border-red-200 hover:bg-red-50 hover:text-red-500 transition-all px-3.5 py-2 rounded-lg shrink-0 disabled:opacity-60"
           >
             <LogOut size={14} />
             <span className="hidden sm:inline">{loggingOut ? "Logging out..." : "Log out"}</span>
           </button>
         </div>
 
+        {/* Stats — only show when there's something to show */}
+        {!loadingStartups && startups.length > 0 && (
+          <StatsBar startups={startups} />
+        )}
+
         {/* Startups section */}
         <div className="flex flex-col gap-4">
+
+          {/* Section header */}
           <div className="flex items-center justify-between gap-3 flex-wrap">
             <div className="flex items-center gap-2">
               <h2 className="text-sm font-semibold text-slate-700">My Startups</h2>
               {!loadingStartups && (
-                <span className="text-xs text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">{startups.length}</span>
+                <span className="text-xs text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">
+                  {filteredStartups.length}{filter !== "all" ? ` of ${startups.length}` : ""}
+                </span>
               )}
             </div>
             <div className="flex items-center gap-2">
@@ -286,14 +379,19 @@ export default function DashboardPage() {
             </div>
           </div>
 
+          {/* Loading */}
           {loadingStartups && (
             <div className="flex justify-center py-16 text-slate-400 text-sm">Loading...</div>
           )}
 
+          {/* Empty — no startups at all */}
           {!loadingStartups && startups.length === 0 && (
             <div className="flex flex-col items-center py-16 gap-3 text-slate-400 border border-dashed border-slate-200 rounded-2xl">
-              <span className="text-3xl">🚀</span>
-              <span className="text-sm">You haven't added any startups yet.</span>
+              <span className="text-4xl">🚀</span>
+              <div className="flex flex-col items-center gap-1">
+                <span className="text-sm font-medium text-slate-600">No startups yet</span>
+                <span className="text-xs text-slate-400">List your first product for the community to discover.</span>
+              </div>
               <Link href="/new">
                 <button className="flex items-center gap-1.5 text-sm bg-slate-900 text-slate-50 px-4 py-2 rounded-lg hover:bg-slate-700 transition-colors mt-1">
                   <Plus size={14} /> Add your first startup
@@ -302,6 +400,7 @@ export default function DashboardPage() {
             </div>
           )}
 
+          {/* Empty — filter returned nothing */}
           {!loadingStartups && startups.length > 0 && filteredStartups.length === 0 && (
             <div className="flex flex-col items-center py-12 gap-2 text-slate-400 border border-dashed border-slate-200 rounded-2xl">
               <span className="text-2xl">🔍</span>
@@ -309,6 +408,7 @@ export default function DashboardPage() {
             </div>
           )}
 
+          {/* Cards */}
           {!loadingStartups && filteredStartups.length > 0 && (
             <div className="flex flex-col gap-3">
               {filteredStartups.map((startup) => (
@@ -316,6 +416,7 @@ export default function DashboardPage() {
               ))}
             </div>
           )}
+
         </div>
       </div>
     </>
