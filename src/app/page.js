@@ -6,19 +6,13 @@ import { useState, useEffect, useRef } from "react";
 import { authClient } from "@/lib/auth-client";
 import axios from "axios";
 import {CATEGORY_LABELS} from "@/constants/constants.js"
+import Avatar from "@/components/ui/Avatar"
+import Footer from "@/components/ui/Footer"
 
 
 const toSlug = (name) =>
   name?.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") ?? "";
 
-// ── Sub-components ─────────────────────────────────────────────────────────────
-
-function Avatar({ src, name, size = 28 }) {
-  const initials = name ? name.split(" ").map((w) => w[0]).join("").toUpperCase().slice(0, 2) : "?";
-  const style = { width: size, height: size, flexShrink: 0 };
-  if (src) return <img src={src} alt={name} style={style} className="rounded-full object-cover ring-1 ring-slate-200" />;
-  return <div style={style} className="rounded-full bg-slate-200 flex items-center justify-center text-xs font-semibold text-slate-600 ring-1 ring-slate-300">{initials}</div>;
-}
 
 function ForSaleBadge() {
   return (
@@ -282,6 +276,7 @@ export default function Home() {
   const showDropdown = searchFocused && query.trim().length >= 1;
 
   return (
+    <div>
     <div className="max-w-4xl mx-auto px-4 sm:px-6">
 
       {isLoggedIn && <DashboardButton user={session?.user} />}
@@ -502,6 +497,9 @@ export default function Home() {
           </>
         )}
       </div>
+      
+    </div>
+    <Footer />
     </div>
   );
 }

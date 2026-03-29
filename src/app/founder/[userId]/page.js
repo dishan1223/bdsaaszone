@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { ArrowLeft, Globe, Heart, Tag, DollarSign, Users, BarChart2, ExternalLink } from "lucide-react";
 import { TECH_ICONS } from "@/lib/techIcons";
+import Footer from "@/components/ui/Footer"
 
 const CATEGORY_LABELS = {
   ai: "AI", productivity: "Productivity", marketing: "Marketing", finance: "Finance",
@@ -193,6 +194,8 @@ export default async function FounderPage({ params }) {
   ];
 
   return (
+
+    <div>
     <div className="max-w-3xl mx-auto px-4 sm:px-6 py-10 sm:py-14">
 
       {/* Back */}
@@ -285,6 +288,8 @@ export default async function FounderPage({ params }) {
           </div>
         )}
       </div>
+    </div>
+    <Footer />
     </div>
   );
 }

@@ -7,18 +7,25 @@ export default function SitePreview({ url, name }) {
   const [failed, setFailed] = useState(false);
   const containerRef = useRef(null);
   const [scale, setScale] = useState(1);
+  const [displayH, setDisplayH] = useState(420);
 
   const IFRAME_W = 1920;
   const IFRAME_H = 1080;
-  const DISPLAY_H = 420; // visible height of the preview box in px
 
   useEffect(() => {
     const update = () => {
       if (containerRef.current) {
         const containerW = containerRef.current.offsetWidth;
-        setScale(containerW / IFRAME_W);
+        const newScale = containerW / IFRAME_W;
+
+        setScale(newScale);
+
+        // Maintain aspect ratio (16:9) and cap at 420px
+        const scaledHeight = IFRAME_H * newScale;
+        setDisplayH(Math.min(420, scaledHeight));
       }
     };
+
     update();
     window.addEventListener("resize", update);
     return () => window.removeEventListener("resize", update);
@@ -30,7 +37,9 @@ export default function SitePreview({ url, name }) {
         <div className="w-10 h-10 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center">
           <Globe size={18} className="text-slate-400" />
         </div>
-        <p className="text-sm text-slate-400">This site doesn't allow previews.</p>
+        <p className="text-sm text-slate-400">
+          This site doesn't allow previews.
+        </p>
         <a
           href={url}
           target="_blank"
@@ -45,11 +54,11 @@ export default function SitePreview({ url, name }) {
 
   return (
     <div className="flex flex-col gap-2">
-      {/* Container — clips the scaled iframe to DISPLAY_H */}
+      {/* Container — clips the scaled iframe */}
       <div
         ref={containerRef}
         className="relative rounded-xl border border-slate-200 overflow-hidden bg-slate-100"
-        style={{ height: DISPLAY_H }}
+        style={{ height: displayH }}
       >
         {/* Transparent overlay — blocks all mouse interaction */}
         <div className="absolute inset-0 z-10" />
@@ -61,7 +70,6 @@ export default function SitePreview({ url, name }) {
             height: IFRAME_H,
             transformOrigin: "top left",
             transform: `scale(${scale})`,
-            // Keep the div from pushing layout
             position: "absolute",
             top: 0,
             left: 0,
@@ -87,7 +95,9 @@ export default function SitePreview({ url, name }) {
 
       {/* Footer */}
       <div className="flex items-center justify-between px-1">
-        <span className="text-xs text-slate-400 truncate max-w-[70%]">{url}</span>
+        <span className="text-xs text-slate-400 truncate max-w-[70%]">
+          {url}
+        </span>
         <a
           href={url}
           target="_blank"

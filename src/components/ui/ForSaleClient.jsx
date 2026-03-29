@@ -1,9 +1,12 @@
+// this is basically the /for-sale page
+// i though i would put caching but i did not. 
+// so its here now
 "use client";
-// src/app/for-sale/ForSaleClient.jsx
 import { useState, useMemo } from "react";
 import Link from "next/link";
 import { ArrowLeft, Heart, DollarSign, SlidersHorizontal, X } from "lucide-react";
 import {CATEGORY_LABELS} from "@/constants/constants.js"
+import Avatar from "@/components/ui/Avatar"
 
 
 const toSlug = (name) =>
@@ -16,15 +19,6 @@ function parsePrice(str) {
   return isNaN(num) ? null : num;
 }
 
-function Avatar({ src, name }) {
-  const initials = name ? name.split(" ").map((w) => w[0]).join("").toUpperCase().slice(0, 2) : "?";
-  if (src) return <img src={src} alt={name} style={{ width: 24, height: 24, flexShrink: 0 }} className="rounded-full object-cover ring-1 ring-slate-200" />;
-  return (
-    <div style={{ width: 24, height: 24, flexShrink: 0 }} className="rounded-full bg-slate-200 flex items-center justify-center text-xs font-semibold text-slate-600 ring-1 ring-slate-300">
-      {initials}
-    </div>
-  );
-}
 
 function LogoSquare({ src, name }) {
   if (src) return <img src={src} alt={name} style={{ width: 38, height: 38, flexShrink: 0 }} className="rounded-lg object-cover border border-slate-200" />;
@@ -271,7 +265,7 @@ export default function ForSaleClient({ startups }) {
                       </td>
                       <td className="py-2.5 hidden sm:table-cell">
                         <div className="flex items-center gap-2">
-                          <Avatar src={startup.founder?.image} name={startup.founder?.name} />
+                          <Avatar src={startup.founder?.image} name={startup.founder?.name} size={24} />
                           <span className="text-sm text-slate-600">{startup.founder?.name ?? "Unknown"}</span>
                         </div>
                       </td>

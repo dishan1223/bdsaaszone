@@ -11,6 +11,7 @@ import SitePreview from "@/components/ui/SitePreview";
 import CommentSection from "@/components/ui/CommentSection";
 import { TECH_ICONS } from "@/constants/constants.js";
 import { CATEGORY_LABELS, PRODUCT_TYPE_LABELS } from "@/constants/constants.js";
+import Footer from "@/components/ui/Footer"
 
 const toSlug = (name) =>
   name?.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") ?? "";
@@ -53,6 +54,7 @@ export default async function StartupPage({ params }) {
     : false;
 
   return (
+    <div>
     <div className="max-w-3xl mx-auto px-4 sm:px-6 py-10">
 
       {/* Back */}
@@ -249,6 +251,8 @@ export default async function StartupPage({ params }) {
       {/* Comments */}
       <CommentSection startupId={startup._id} />
 
+    </div>
+    <Footer />
     </div>
   );
 }

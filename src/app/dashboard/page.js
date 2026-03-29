@@ -120,7 +120,6 @@ function DeleteModal({ startup, onConfirm, onCancel, loading }) {
   );
 }
 
-// ── Startup card ───────────────────────────────────────────────────────────────
 function StartupCard({ startup, onDeleteClick }) {
   const slug = toSlug(startup.name);
   const createdAt = startup.createdAt
@@ -233,7 +232,7 @@ function StartupCard({ startup, onDeleteClick }) {
   );
 }
 
-// ── Main ───────────────────────────────────────────────────────────────────────
+// main page
 export default function DashboardPage() {
   const router = useRouter();
   const { data: session, isPending: sessionLoading } = authClient.useSession();
@@ -305,7 +304,7 @@ export default function DashboardPage() {
 
       <div className="max-w-3xl mx-auto px-4 sm:px-6 py-10 sm:py-14">
 
-        {/* Back */}
+        {/* Back button */}
         <Link href="/" className="flex items-center gap-2 text-slate-500 hover:text-slate-700 transition-colors mb-8 w-fit">
           <ArrowLeft size={15} />
           <span className="text-sm">Back to home</span>
