@@ -12,7 +12,7 @@
 ---
 
 ## The Vision
-**BDSaaSZone** is an open-source platform built to empower the Bangladeshi SaaS ecosystem. 
+**BDSaaSZone** is an open-source platform built to empower the Bangladeshi SaaS ecosystem.
 - **Showcase:** Founders get a dedicated space showcase their SaaS startups.
 - **Acquire:** A marketplace for products ready to be handed over to new owners.
 - **Inspire:** A living database for developers to study market-ready ideas.
@@ -46,17 +46,37 @@
 3. **Configure Environment Variables**<br>
    create a `.env.local` file in the root directory
    ```bash
-   MONGODB_URI=your_mongodb_connection_string
-   BETTER_AUTH_SECRET=your_auth_secret
-   NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME=your_cloud_name
-   ```
+    NEXT_PUBLIC_APP_URL=http://localhost:3000
+
+    # google authentication
+    GOOGLE_CLIENT_ID=oauth_client_id
+    GOOGLE_CLIENT_SECRET=oauth_client_secret
+
+    # mongodb database
+    DB="development"
+    MONGODB_URI=your_mongoDB_connection_string
+
+    # better auth credentials
+    # in your terminal, type : openssl rand -base64 32 (in linux terminal, Don't know if it works on windows)
+    # this command will generate you a string that can be used as BETTER_AUTH_SECRET
+    BETTER_AUTH_BASE_URL=http://localhost:3000
+    BETTER_AUTH_SECRET=generate_a_secret_with_openssl
+
+
+    # CLOUDINARY credentials
+    CLOUDINARY_CLOUD_NAME=your_cloudinary_cloud_name
+    CLOUDINARY_API_KEY=your_cloudinary_api_key
+    CLOUDINARY_API_SECRET=your_cloudinary_api_secret
+    ```
 4. **Run development environment**
    ```bash
-   npm run dev
+    npm run dev
+    # switch to node js latest version with this command(if needed)
+    nvm use --lts
    ```
 
 
-## 🤝 Contributing
+## Contributing
 Contributions are what make the open-source community so powerful!
 1. **Fork** the Project.
 2. Create your **Feature Branch** (`git checkout -b feature/AmazingFeature`).
@@ -64,7 +84,7 @@ Contributions are what make the open-source community so powerful!
 4. **Push** to the Branch.
 5. Open a **Pull Request**.
 
-## 📄 License
+## License
 Distributed under the **GNU General Public License v3.0**. See `LICENSE` for details.
 
 ---
