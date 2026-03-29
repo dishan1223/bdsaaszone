@@ -199,7 +199,7 @@ export default function CommentSection({ startupId }) {
                 {isOwn && !isDeleting && (
                   <button
                     onClick={() => setDeleteTarget(c._id)}
-                    className="shrink-0 text-slate-800 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100 mt-0.5"
+                    className="shrink-0 text-slate-800 hover:text-red-400 transition-colors md:opacity-0 group-hover:opacity-100 mt-0.5"
                   >
                     <Trash2 size={18} />
                   </button>
