@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 // 1. Define which routes need a login
-const PROTECTED_ROUTES = ["/dashboard", "/new", "/profile", "/courses"];
+const PROTECTED_ROUTES = ["/dashboard", "/new", "/profile", "/courses" , "/startup/edit"];
 
 export async function middleware(request) {
   const { pathname } = request.nextUrl;

@@ -8,10 +8,9 @@ import Image from "next/image";
 import { ArrowLeft, Globe, Tag, Layers, Users, DollarSign } from "lucide-react";
 import LikeButton from "@/components/ui/LikeButton";
 import SitePreview from "@/components/ui/SitePreview";
+import CommentSection from "@/components/ui/CommentSection";
 import { TECH_ICONS } from "@/constants/constants.js";
-import {CATEGORY_LABELS,PRODUCT_TYPE_LABELS} from "@/constants/constants.js"
-
-
+import { CATEGORY_LABELS, PRODUCT_TYPE_LABELS } from "@/constants/constants.js";
 
 const toSlug = (name) =>
   name?.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") ?? "";
@@ -95,20 +94,22 @@ export default async function StartupPage({ params }) {
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
         {/* Founder */}
-        <div className="flex items-center gap-3 p-4 rounded-xl bg-slate-50 border border-slate-200">
-          {startup.founder?.image ? (
-            <img src={startup.founder.image} alt={startup.founder.name}
-              className="w-9 h-9 rounded-full object-cover ring-1 ring-slate-200 shrink-0" />
-          ) : (
-            <div className="w-9 h-9 rounded-full bg-slate-200 flex items-center justify-center text-xs font-semibold text-slate-600 shrink-0">
-              {startup.founder?.name?.split(" ").map(w => w[0]).join("").toUpperCase().slice(0, 2) ?? "?"}
+        <Link href={`/founder/${startup.userId}`} className="block">
+          <div className="flex items-center gap-3 p-4 rounded-xl bg-slate-50 border border-slate-200 hover:border-slate-300 transition-colors cursor-pointer">
+            {startup.founder?.image ? (
+              <img src={startup.founder.image} alt={startup.founder.name}
+                className="w-9 h-9 rounded-full object-cover ring-1 ring-slate-200 shrink-0" />
+            ) : (
+              <div className="w-9 h-9 rounded-full bg-slate-200 flex items-center justify-center text-xs font-semibold text-slate-600 shrink-0">
+                {startup.founder?.name?.split(" ").map(w => w[0]).join("").toUpperCase().slice(0, 2) ?? "?"}
+              </div>
+            )}
+            <div>
+              <div className="text-xs text-slate-400 mb-0.5">Founder</div>
+              <div className="text-sm font-medium text-slate-700">{startup.founder?.name ?? "Unknown"}</div>
             </div>
-          )}
-          <div>
-            <div className="text-xs text-slate-400 mb-0.5">Founder</div>
-            <div className="text-sm font-medium text-slate-700">{startup.founder?.name ?? "Unknown"}</div>
           </div>
-        </div>
+        </Link>
 
         {/* Category */}
         <div className="flex items-center gap-3 p-4 rounded-xl bg-slate-50 border border-slate-200">
@@ -241,6 +242,12 @@ export default async function StartupPage({ params }) {
           </div>
         </div>
       )}
+
+      {/* Divider */}
+      <div className="border-t border-slate-100 mb-8" />
+
+      {/* Comments */}
+      <CommentSection startupId={startup._id} />
 
     </div>
   );

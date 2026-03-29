@@ -6,6 +6,7 @@ import { useRouter, useParams } from "next/navigation";
 import { Upload, Plus, Trash2, ArrowLeft, X, Users } from "lucide-react";
 import axios from "axios";
 import { TechIcon } from "@/lib/techIcons";
+import { authClient } from "@/lib/auth-client";
 
 const CATEGORIES = [
   { value: "ai", label: "AI" },
@@ -173,7 +174,6 @@ function TechStackInput({ selected, onChange }) {
   );
 }
 
-// ── Strip ৳ prefix for editing in the currency input ──────────────────────────
 function stripCurrency(val) {
   return val?.replace(/^৳/, "") ?? "";
 }
@@ -182,14 +182,18 @@ export default function EditStartupPage() {
   const router = useRouter();
   const { slug } = useParams();
 
-  const [loading, setLoading] = useState(true);       // fetching startup
-  const [saving, setSaving] = useState(false);         // submitting form
+  // ── Auth ─────────────────────────────────────────────────────────────────────
+  const { data: session, isPending: sessionLoading } = authClient.useSession();
+
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [startupId, setStartupId] = useState(null);
+  const [unauthorized, setUnauthorized] = useState(false);
 
   const [form, setForm] = useState({ name: "", url: "", productType: "", category: "", description: "" });
   const [logo, setLogo] = useState(null);
-  const [logoPreview, setLogoPreview] = useState(null);  // existing URL or new blob
+  const [logoPreview, setLogoPreview] = useState(null);
   const [existingLogoUrl, setExistingLogoUrl] = useState(null);
   const [subscriptions, setSubscriptions] = useState([{ plan: "", price: "" }]);
   const [techStack, setTechStack] = useState([]);
@@ -198,15 +202,30 @@ export default function EditStartupPage() {
   const [seekingCofounder, setSeekingCofounder] = useState(false);
   const fileInputRef = useRef(null);
 
-  // ── Fetch startup by slug ────────────────────────────────────────────────────
+  // Redirect if not logged in once session resolves
   useEffect(() => {
-    if (!slug) return;
+    if (!sessionLoading && !session?.user) {
+      router.replace("/");
+    }
+  }, [session, sessionLoading, router]);
+
+  // Fetch startup and verify ownership
+  useEffect(() => {
+    if (!slug || sessionLoading || !session?.user) return;
 
     axios.get("/api/startups")
       .then((res) => {
         const all = res.data.startups ?? [];
         const found = all.find((s) => toSlug(s.name) === slug);
+
         if (!found) { setError("Startup not found."); setLoading(false); return; }
+
+        // ── Ownership check ──────────────────────────────────────────────────
+        if (found.userId !== session.user.id) {
+          setUnauthorized(true);
+          setLoading(false);
+          return;
+        }
 
         setStartupId(found._id);
         setForm({
@@ -217,7 +236,6 @@ export default function EditStartupPage() {
           description: found.description ?? "",
         });
 
-        // Subscriptions: strip ৳ prefix for the price input
         const subs = found.subscriptions?.length
           ? found.subscriptions.map((s) => ({ plan: s.plan ?? "", price: stripCurrency(s.price) }))
           : [{ plan: "", price: "" }];
@@ -235,7 +253,7 @@ export default function EditStartupPage() {
       })
       .catch(() => setError("Failed to load startup."))
       .finally(() => setLoading(false));
-  }, [slug]);
+  }, [slug, session, sessionLoading]);
 
   const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
@@ -305,11 +323,27 @@ export default function EditStartupPage() {
     }
   };
 
-  // ── Loading / error states ───────────────────────────────────────────────────
-  if (loading) {
+  // ── Guard states ──────────────────────────────────────────────────────────────
+
+  if (sessionLoading || (loading && !unauthorized)) {
     return (
       <div className="flex items-center justify-center min-h-screen text-slate-400 text-sm">
         Loading...
+      </div>
+    );
+  }
+
+  if (!session?.user) return null; // redirecting
+
+  if (unauthorized) {
+    return (
+      <div className="max-w-2xl mx-auto px-4 py-12">
+        <div className="text-sm text-red-500 bg-red-50 border border-red-200 rounded-lg px-4 py-3">
+          You don't have permission to edit this startup.
+        </div>
+        <Link href="/dashboard" className="inline-flex items-center gap-2 text-slate-500 hover:text-slate-700 text-sm mt-4">
+          <ArrowLeft size={15} /> Back to dashboard
+        </Link>
       </div>
     );
   }

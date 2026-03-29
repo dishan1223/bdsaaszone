@@ -2,9 +2,20 @@ import clientPromise from "@/lib/mongodb";
 import { ObjectId } from "mongodb";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Globe, Heart, Tag, DollarSign, Users, BarChart2, ExternalLink } from "lucide-react";
-import { TECH_ICONS,CATEGORY_LABELS,PRODUCT_TYPE_LABELS } from "@/constants/constants.js"
 import Image from "next/image";
+import { ArrowLeft, Globe, Heart, Tag, DollarSign, Users, BarChart2, ExternalLink } from "lucide-react";
+import { TECH_ICONS } from "@/lib/techIcons";
+
+const CATEGORY_LABELS = {
+  ai: "AI", productivity: "Productivity", marketing: "Marketing", finance: "Finance",
+  hr: "HR & Recruitment", ecommerce: "E-Commerce", education: "Education",
+  healthcare: "Healthcare", "developer-tools": "Developer Tools", analytics: "Analytics",
+  communication: "Communication", design: "Design", security: "Security", other: "Other",
+};
+
+const PRODUCT_TYPE_LABELS = {
+  free: "Free", subscription: "Subscription", one_time: "One-time",
+};
 
 const toSlug = (name) =>
   name?.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") ?? "";
@@ -44,7 +55,7 @@ async function getFounderData(userId) {
   };
 }
 
-// ── Sub-components ─────────────────────────────────────────────────────────────
+// ── Sub-components (no event handlers — safe for Server Components) ────────────
 
 function LogoSquare({ src, name, size = 44 }) {
   const style = { width: size, height: size, flexShrink: 0 };
@@ -69,11 +80,30 @@ function Badge({ children, color = "slate" }) {
   );
 }
 
+function TechPill({ name }) {
+  const iconSlug = TECH_ICONS[name];
+  return (
+    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-100 border border-slate-200 text-xs font-medium text-slate-600">
+      {iconSlug && (
+        <Image
+          src={`https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/${iconSlug}/${iconSlug}-original.svg`}
+          alt={name}
+          width={12}
+          height={12}
+          style={{ flexShrink: 0 }}
+        />
+      )}
+      {name}
+    </span>
+  );
+}
+
 function StartupCard({ startup }) {
   const slug = toSlug(startup.name);
   return (
     <Link href={`/startups/${slug}`} className="block group">
       <div className="flex flex-col gap-3 p-4 rounded-xl bg-white border border-slate-200 hover:border-slate-300 hover:shadow-sm transition-all">
+
         {/* Top row */}
         <div className="flex items-start gap-3">
           <LogoSquare src={startup.logoUrl} name={startup.name} />
@@ -125,24 +155,9 @@ function StartupCard({ startup }) {
         {/* Tech stack */}
         {startup.techStack?.length > 0 && (
           <div className="flex gap-1.5 flex-wrap">
-            {startup.techStack.slice(0, 5).map((t) => {
-              const iconSlug = TECH_ICONS[t];
-              return (
-                <span key={t} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-100 border border-slate-200 text-xs font-medium text-slate-600">
-                  {iconSlug && (
-                    <img
-                      src={`https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/${iconSlug}/${iconSlug}-original.svg`}
-                      alt={t}
-                      width={12}
-                      height={12}
-                      style={{ flexShrink: 0 }}
-                      onError={(e) => { e.currentTarget.style.display = "none"; }}
-                    />
-                  )}
-                  {t}
-                </span>
-              );
-            })}
+            {startup.techStack.slice(0, 5).map((t) => (
+              <TechPill key={t} name={t} />
+            ))}
             {startup.techStack.length > 5 && (
               <span className="text-xs text-slate-400 self-center">+{startup.techStack.length - 5} more</span>
             )}
@@ -161,19 +176,19 @@ export default async function FounderPage({ params }) {
 
   const { founder, startups } = data;
 
-  const totalLikes    = startups.reduce((acc, s) => acc + s.likes, 0);
-  const forSaleCount  = startups.filter((s) => s.forSale).length;
+  const totalLikes     = startups.reduce((acc, s) => acc + s.likes, 0);
+  const forSaleCount   = startups.filter((s) => s.forSale).length;
   const cofounderCount = startups.filter((s) => s.seekingCofounder).length;
-  const mostLiked     = startups[0]; // already sorted by likes desc
+  const mostLiked      = startups[0]; // sorted by likes desc
 
   const memberSince = founder.memberSince
     ? new Date(founder.memberSince).toLocaleDateString("en-GB", { month: "long", year: "numeric" })
     : null;
 
   const stats = [
-    { icon: <BarChart2 size={15} className="text-slate-400" />, label: "Startups",        value: startups.length },
-    { icon: <Heart size={15} className="text-rose-400" />,      label: "Total likes",     value: totalLikes },
-    { icon: <DollarSign size={15} className="text-blue-400" />, label: "For sale",        value: forSaleCount },
+    { icon: <BarChart2 size={15} className="text-slate-400" />, label: "Startups",          value: startups.length },
+    { icon: <Heart size={15} className="text-rose-400" />,      label: "Total likes",       value: totalLikes },
+    { icon: <DollarSign size={15} className="text-blue-400" />, label: "For sale",          value: forSaleCount },
     { icon: <Users size={15} className="text-green-400" />,     label: "Seeking co-founder", value: cofounderCount },
   ];
 
@@ -232,7 +247,6 @@ export default async function FounderPage({ params }) {
             ))}
           </div>
 
-          {/* Most liked callout */}
           {mostLiked && mostLiked.likes > 0 && (
             <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-rose-50 border border-rose-100">
               <Heart size={14} className="text-rose-400 shrink-0" />
@@ -248,8 +262,12 @@ export default async function FounderPage({ params }) {
       {/* Startups */}
       <div className="flex flex-col gap-4">
         <div className="flex items-center gap-2">
-          <h2 className="text-sm font-semibold text-slate-700">Startups by {founder.name?.split(" ")[0]}</h2>
-          <span className="text-xs text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">{startups.length}</span>
+          <h2 className="text-sm font-semibold text-slate-700">
+            Startups by {founder.name?.split(" ")[0]}
+          </h2>
+          <span className="text-xs text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">
+            {startups.length}
+          </span>
         </div>
 
         {startups.length === 0 && (
