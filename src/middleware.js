@@ -11,7 +11,7 @@ export async function middleware(request) {
 
   if (isProtected) {
     // 3. Better Auth stores the session in this cookie by default
-    const sessionCookie = request.cookies.get("better-auth.session_token");
+    const sessionCookie = request.cookies.get("better-auth.session_token") || request.cookies.get("__Secure-better-auth.session_token");
 
     // 4. If no cookie, redirect them to login
     if (!sessionCookie) {
