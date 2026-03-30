@@ -53,6 +53,25 @@ function SaleCard({ startup }) {
   );
 }
 
+// Skeleton component for SaleCard
+function SaleCardSkeleton() {
+  return (
+    <div className="w-40 sm:w-44 p-3 rounded-xl bg-white border border-slate-300 flex flex-col gap-2.5">
+      <div className="flex items-center gap-2">
+        <div className="w-8 h-8 rounded-lg bg-slate-200 animate-pulse"></div>
+        <div className="h-4 bg-slate-200 rounded w-24 animate-pulse"></div>
+      </div>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-1">
+          <div className="w-3 h-3 bg-slate-200 rounded animate-pulse"></div>
+          <div className="h-3 bg-slate-200 rounded w-4 animate-pulse"></div>
+        </div>
+        <div className="h-3 bg-slate-200 rounded w-16 animate-pulse"></div>
+      </div>
+    </div>
+  );
+}
+
 function StartupMobileCard({ startup, idx }) {
   return (
     <Link href={`/startups/${toSlug(startup.name)}`} className="block">
@@ -81,6 +100,29 @@ function StartupMobileCard({ startup, idx }) {
         </div>
       </div>
     </Link>
+  );
+}
+
+// Skeleton component for StartupMobileCard
+function StartupMobileCardSkeleton({ idx }) {
+  return (
+    <div className="flex items-center gap-3 p-3 rounded-xl border border-slate-200 bg-white">
+      <div className="w-5 h-4 bg-slate-200 rounded animate-pulse"></div>
+      <div className="w-8 h-8 rounded-lg bg-slate-200 animate-pulse"></div>
+      <div className="flex-1 min-w-0">
+        <div className="h-4 bg-slate-200 rounded w-24 mb-1 animate-pulse"></div>
+        <div className="h-3 bg-slate-200 rounded w-full mb-1 animate-pulse"></div>
+        <div className="flex items-center gap-2 mt-1">
+          <div className="h-3 bg-slate-200 rounded w-16 animate-pulse"></div>
+          <div className="h-3 bg-slate-200 rounded w-1 animate-pulse"></div>
+          <div className="h-3 bg-slate-200 rounded w-16 animate-pulse"></div>
+        </div>
+      </div>
+      <div className="flex items-center gap-1">
+        <div className="w-3 h-3 bg-slate-200 rounded animate-pulse"></div>
+        <div className="h-3 bg-slate-200 rounded w-4 animate-pulse"></div>
+      </div>
+    </div>
   );
 }
 
@@ -275,6 +317,9 @@ export default function Home() {
   const forSale = startups.filter((s) => s.forSale);
   const showDropdown = searchFocused && query.trim().length >= 1;
 
+  // Skeleton count for loading state
+  const skeletonCount = 5;
+
   return (
     <div>
     <div className="max-w-4xl mx-auto px-4 sm:px-6">
@@ -347,7 +392,22 @@ export default function Home() {
       </div>
 
       {/* ── For Sale ──────────────────────────────────────────────────────── */}
-      {!loading && forSale.length > 0 && !activeQuery && (
+      {loading ? (
+        <div className="mt-10 sm:mt-14">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <div className="h-4 bg-slate-200 rounded w-20 animate-pulse"></div>
+              <div className="h-5 bg-slate-200 rounded-full w-8 animate-pulse"></div>
+            </div>
+            <div className="h-4 bg-slate-200 rounded w-16 animate-pulse"></div>
+          </div>
+          <div className="flex gap-3 overflow-x-auto pb-2" style={{ scrollbarWidth: "none" }}>
+            {Array.from({ length: 4 }).map((_, i) => (
+              <SaleCardSkeleton key={i} />
+            ))}
+          </div>
+        </div>
+      ) : forSale.length > 0 && !activeQuery && (
         <div className="mt-10 sm:mt-14">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
@@ -375,6 +435,9 @@ export default function Home() {
             {!loading && (
               <span className="text-xs text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">{filtered.length}</span>
             )}
+            {loading && (
+              <div className="h-5 bg-slate-200 rounded-full w-8 animate-pulse"></div>
+            )}
           </div>
           <div className="relative">
             <select
@@ -391,7 +454,63 @@ export default function Home() {
           </div>
         </div>
 
-        {loading && <div className="flex justify-center py-16 text-slate-400 text-sm">Loading...</div>}
+        {loading && (
+          <>
+            {/* Desktop table skeleton */}
+            <div className="hidden sm:block overflow-x-auto rounded-xl border border-slate-300">
+              <table className="table w-full">
+                <thead>
+                  <tr className="bg-slate-50 text-slate-500 text-xs uppercase tracking-wide border-b border-slate-200">
+                    <th className="w-10 font-medium py-3 pl-4 bg-transparent">#</th>
+                    <th className="font-medium py-3 bg-transparent">Startup</th>
+                    <th className="font-medium py-3 bg-transparent">Founder</th>
+                    <th className="font-medium py-3 bg-transparent">Category</th>
+                    <th className="font-medium py-3 pr-4 bg-transparent text-right">Likes</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {Array.from({ length: skeletonCount }).map((_, idx) => (
+                    <tr key={idx} className="border-b border-slate-100 bg-slate-50">
+                      <td className="pl-4 py-3 text-sm text-slate-400 font-mono w-10 align-top pt-4">{idx + 1}</td>
+                      <td className="py-3">
+                        <div className="flex items-start gap-3">
+                          <div className="w-8 h-8 rounded-lg bg-slate-200 animate-pulse"></div>
+                          <div className="flex flex-col gap-1 min-w-0">
+                            <div className="h-4 bg-slate-200 rounded w-32 animate-pulse"></div>
+                            <div className="h-3 bg-slate-200 rounded w-full animate-pulse"></div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-3 align-top pt-4">
+                        <div className="flex items-center gap-2">
+                          <div className="w-7 h-7 rounded-full bg-slate-200 animate-pulse"></div>
+                          <div className="h-4 bg-slate-200 rounded w-24 animate-pulse"></div>
+                        </div>
+                      </td>
+                      <td className="py-3 align-top pt-4">
+                        <div className="h-6 bg-slate-200 rounded-full w-20 animate-pulse"></div>
+                      </td>
+                      <td className="py-3 pr-4 text-right align-top pt-4">
+                        <div className="flex items-center justify-end gap-1.5">
+                          <div className="w-3 h-3 bg-slate-200 rounded animate-pulse"></div>
+                          <div className="h-4 bg-slate-200 rounded w-4 animate-pulse"></div>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile cards skeleton */}
+            <div className="flex flex-col gap-2 sm:hidden">
+              {Array.from({ length: skeletonCount }).map((_, idx) => (
+                <StartupMobileCardSkeleton key={idx} idx={idx} />
+              ))}
+            </div>
+          </>
+        )}
+
         {error && <div className="text-sm text-red-500 bg-red-50 border border-red-200 rounded-lg px-4 py-3">{error}</div>}
 
         {!loading && !error && filtered.length === 0 && (
