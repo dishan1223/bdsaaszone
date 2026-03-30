@@ -11,7 +11,7 @@ import SitePreview from "@/components/ui/SitePreview";
 import CommentSection from "@/components/ui/CommentSection";
 import { TECH_ICONS } from "@/constants/constants.js";
 import { CATEGORY_LABELS, PRODUCT_TYPE_LABELS } from "@/constants/constants.js";
-import Footer from "@/components/ui/Footer"
+
 
 const toSlug = (name) =>
   name?.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") ?? "";
@@ -252,7 +252,7 @@ export default async function StartupPage({ params }) {
       <CommentSection startupId={startup._id} />
 
     </div>
-    <Footer />
+    
     </div>
   );
 }
