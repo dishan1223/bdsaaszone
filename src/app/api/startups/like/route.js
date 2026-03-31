@@ -1,72 +1,64 @@
+// src/app/api/startups/like/route.js
 import { NextResponse } from "next/server";
+import { headers } from "next/headers";
+import { auth } from "@/lib/auth";
 import clientPromise from "@/lib/mongodb";
 import { ObjectId } from "mongodb";
-import { auth } from "@/lib/auth";
-import { headers } from "next/headers";
+import { createNotification } from "@/lib/createNotification";
+
+const toSlug = (name) =>
+  name?.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") ?? "";
 
 export async function POST(req) {
   try {
     const session = await auth.api.getSession({ headers: await headers() });
     if (!session?.user) {
-      return NextResponse.json(
-        { message: "You must be logged in to like a startup." },
-        { status: 401 }
-      );
+      return NextResponse.json({ message: "You must be logged in to like." }, { status: 401 });
     }
 
-    const userId = session.user.id;
     const { startupId } = await req.json();
-
-    if (!startupId) {
-      return NextResponse.json({ message: "Missing startupId." }, { status: 400 });
+    let oid;
+    try { oid = new ObjectId(startupId); } catch {
+      return NextResponse.json({ message: "Invalid startup ID." }, { status: 400 });
     }
 
     const client = await clientPromise;
     const db = client.db(process.env.DB);
-    const col = db.collection("startups");
+    const userId = session.user.id;
 
-    // Check current state
-    const startup = await col.findOne(
-      { _id: new ObjectId(startupId) },
-      { projection: { likes: 1, likedBy: 1 } }
-    );
+    const startup = await db.collection("startups").findOne({ _id: oid });
+    if (!startup) return NextResponse.json({ message: "Startup not found." }, { status: 404 });
 
-    if (!startup) {
-      return NextResponse.json({ message: "Startup not found." }, { status: 404 });
-    }
+    const alreadyLiked = (startup.likedBy ?? []).includes(userId);
 
-    const alreadyLiked = Array.isArray(startup.likedBy) && startup.likedBy.includes(userId);
-
-    let result;
     if (alreadyLiked) {
-      // Unlike — remove userId from likedBy, decrement likes (floor 0)
-      result = await col.findOneAndUpdate(
-        { _id: new ObjectId(startupId), likes: { $gt: 0 } },
-        {
-          $inc: { likes: -1 },
-          $pull: { likedBy: userId },
-        },
-        { returnDocument: "after", projection: { likes: 1 } }
+      await db.collection("startups").updateOne(
+        { _id: oid },
+        { $inc: { likes: -1 }, $pull: { likedBy: userId } }
       );
+      return NextResponse.json({ liked: false, likes: Math.max(0, (startup.likes ?? 1) - 1) });
     } else {
-      // Like — add userId to likedBy, increment likes
-      result = await col.findOneAndUpdate(
-        { _id: new ObjectId(startupId) },
-        {
-          $inc: { likes: 1 },
-          $addToSet: { likedBy: userId },
-        },
-        { returnDocument: "after", projection: { likes: 1 } }
+      await db.collection("startups").updateOne(
+        { _id: oid },
+        { $inc: { likes: 1 }, $addToSet: { likedBy: userId } }
       );
-    }
 
-    const newLikes = result?.likes ?? startup.likes ?? 0;
-    return NextResponse.json({ likes: newLikes, liked: !alreadyLiked });
+      // ── Fire-and-forget notification (never awaited to block response) ──────
+      createNotification({
+        founderId:   startup.userId,
+        actorId:     userId,
+        actorName:   session.user.name,
+        actorImage:  session.user.image ?? null,
+        type:        "like",
+        startupId:   startupId,
+        startupName: startup.name,
+        startupSlug: toSlug(startup.name),
+      });
+
+      return NextResponse.json({ liked: true, likes: (startup.likes ?? 0) + 1 });
+    }
   } catch (err) {
     console.error("[POST /api/startups/like]", err);
-    return NextResponse.json(
-      { message: "Internal server error." },
-      { status: 500 }
-    );
+    return NextResponse.json({ message: "Failed to update like." }, { status: 500 });
   }
 }

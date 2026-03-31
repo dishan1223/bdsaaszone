@@ -4,6 +4,10 @@ import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
 import clientPromise from "@/lib/mongodb";
 import { ObjectId } from "mongodb";
+import { createNotification } from "@/lib/createNotification";
+
+const toSlug = (name) =>
+  name?.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") ?? "";
 
 // ── GET /api/startups/comments/[startupId]?page=1&limit=10
 export async function GET(req, { params }) {
@@ -51,7 +55,6 @@ export async function GET(req, { params }) {
     const userMap = {};
     for (const u of users) userMap[u._id.toString()] = { name: u.name, image: u.image ?? null };
 
-    // ── Include likes + likedBy on replies so CommentLikeButton knows initial state
     const repliesByParent = {};
     for (const r of allReplies) {
       if (!repliesByParent[r.parentId]) repliesByParent[r.parentId] = [];
@@ -64,7 +67,6 @@ export async function GET(req, { params }) {
       });
     }
 
-    // ── Include likes + likedBy on comments so CommentLikeButton knows initial state
     const enriched = comments.map((c) => ({
       ...c,
       _id: c._id.toString(),
@@ -103,6 +105,11 @@ export async function POST(req, { params }) {
     const db = client.db(process.env.DB);
     const now = new Date();
 
+    // Fetch startup for notification metadata (lightweight projection)
+    const startup = await db.collection("startups")
+      .findOne({ _id: startupId }, { projection: { userId: 1, name: 1 } })
+      .catch(() => null);
+
     const doc = {
       startupId,
       userId: session.user.id,
@@ -114,6 +121,21 @@ export async function POST(req, { params }) {
     };
 
     const result = await db.collection("comments").insertOne(doc);
+
+    // ── Fire-and-forget notification (not awaited — never blocks response) ────
+    if (startup) {
+      createNotification({
+        founderId:   startup.userId,
+        actorId:     session.user.id,
+        actorName:   session.user.name,
+        actorImage:  session.user.image ?? null,
+        type:        "comment",
+        startupId,
+        startupName: startup.name,
+        startupSlug: toSlug(startup.name),
+        preview:     text.trim().slice(0, 80),
+      });
+    }
 
     return NextResponse.json({
       comment: {

@@ -8,6 +8,7 @@ import axios from "axios";
 import {CATEGORY_LABELS} from "@/constants/constants.js"
 import Avatar from "@/components/ui/Avatar"
 import Footer from "@/components/ui/Footer"
+import NotificationBell from "@/components/ui/NotificationBell";
 
 
 const toSlug = (name) =>
@@ -325,6 +326,7 @@ export default function Home() {
     <div className="max-w-4xl mx-auto px-4 sm:px-6">
 
       {isLoggedIn && <DashboardButton user={session?.user} />}
+      {isLoggedIn && <NotificationBell userId={session?.user?.id} />}
 
       {/* ── Hero ──────────────────────────────────────────────────────────── */}
       <div className="flex flex-col items-center mt-12 sm:mt-20 gap-4">
