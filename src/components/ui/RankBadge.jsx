@@ -1,4 +1,3 @@
-// src/components/ui/RankBadge.jsx
 "use client";
 
 const RANK_META = {
@@ -32,6 +31,24 @@ export function RankBadgeSmall({ rank }) {
     }}>
       <MedalSVG color={c.medal} size={10} />
       {c.label} on BD SaaS Zone
+    </span>
+  );
+}
+
+// ── Mobile-optimized badge — compact version for mobile cards ─────────────────
+export function RankBadgeMobile({ rank }) {
+  const c = RANK_META[rank];
+  if (!c) return null;
+  return (
+    <span style={{
+      display: "inline-flex", alignItems: "center", justifyContent: "center",
+      gap: "2px", background: c.bg, border: `1px solid ${c.border}`,
+      color: c.text, fontSize: "9px", fontWeight: 700,
+      padding: "1.5px 4px", borderRadius: "999px",
+      whiteSpace: "nowrap", flexShrink: 0, minWidth: "28px",
+    }}>
+      <MedalSVG color={c.medal} size={8} />
+      {rank}
     </span>
   );
 }

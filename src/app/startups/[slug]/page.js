@@ -86,16 +86,24 @@ export default async function StartupPage({ params }) {
             </a>
           </div>
           <div className="flex items-center gap-2">
-            {/* Rank badge - only showing the badge without background */}
-            {startup.currentRank && <RankBadgeLarge rank={startup.currentRank} />}
+            {/* Rank badge - only showing on sm+ screens */}
+            {startup.currentRank && <div className="hidden sm:flex"><RankBadgeLarge rank={startup.currentRank} /></div>}
             <LikeButton startupId={startup._id} initialLikes={startup.likes} initialLiked={initialLiked} />
           </div>
         </div>
 
-        {/* Rank History Section - keeping it in its original position */}
-        {hasRankHistory && (
+        {/* Rank History Section - with rank badge on mobile */}
+        {(hasRankHistory || startup.currentRank) && (
           <div className="mb-8 p-4 rounded-xl bg-slate-50 border border-slate-200">
-            <RankHistory timesRanked={startup.timesRanked} />
+            <div className="sm:text-left text-center">
+              {/* Show rank badge on mobile only */}
+              {startup.currentRank && (
+                <div className="flex sm:hidden justify-center mb-3">
+                  <RankBadgeLarge rank={startup.currentRank} />
+                </div>
+              )}
+              {hasRankHistory && <RankHistory timesRanked={startup.timesRanked} />}
+            </div>
           </div>
         )}
 

@@ -9,7 +9,7 @@ import { CATEGORY_LABELS } from "@/constants/constants.js";
 import Avatar from "@/components/ui/Avatar";
 import Footer from "@/components/ui/Footer";
 import NotificationBell from "@/components/ui/NotificationBell";
-import { RankBadgeSmall } from "@/components/ui/RankBadge";
+import { RankBadgeSmall, RankBadgeMobile } from "@/components/ui/RankBadge";
 
 const toSlug = (name) =>
   name?.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") ?? "";
@@ -80,7 +80,7 @@ function StartupMobileCard({ startup, idx }) {
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-sm font-semibold text-slate-800 truncate">{startup.name}</span>
-            {startup.currentRank && <RankBadgeSmall rank={startup.currentRank} />}
+            {startup.currentRank && <RankBadgeMobile rank={startup.currentRank} />}
             {startup.forSale && <ForSaleBadge />}
           </div>
           {startup.description && (
