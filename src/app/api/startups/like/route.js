@@ -1,10 +1,10 @@
-// src/app/api/startups/like/route.js
 import { NextResponse } from "next/server";
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
 import clientPromise from "@/lib/mongodb";
 import { ObjectId } from "mongodb";
 import { createNotification } from "@/lib/createNotification";
+import { invalidateStartupsCache } from "@/lib/redis"; // Import helper
 
 const toSlug = (name) =>
   name?.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") ?? "";
@@ -36,6 +36,10 @@ export async function POST(req) {
         { _id: oid },
         { $inc: { likes: -1 }, $pull: { likedBy: userId } }
       );
+      
+      // Invalidate cache because like counts/positions changed
+      await invalidateStartupsCache();
+
       return NextResponse.json({ liked: false, likes: Math.max(0, (startup.likes ?? 1) - 1) });
     } else {
       await db.collection("startups").updateOne(
@@ -43,17 +47,20 @@ export async function POST(req) {
         { $inc: { likes: 1 }, $addToSet: { likedBy: userId } }
       );
 
-      // ── Fire-and-forget notification (never awaited to block response) ──────
+      // Fire-and-forget notification
       createNotification({
-        founderId:   startup.userId,
-        actorId:     userId,
-        actorName:   session.user.name,
-        actorImage:  session.user.image ?? null,
-        type:        "like",
-        startupId:   startupId,
+        founderId: startup.userId,
+        actorId: userId,
+        actorName: session.user.name,
+        actorImage: session.user.image ?? null,
+        type: "like",
+        startupId: startupId,
         startupName: startup.name,
         startupSlug: toSlug(startup.name),
       });
+
+      // Invalidate cache
+      await invalidateStartupsCache();
 
       return NextResponse.json({ liked: true, likes: (startup.likes ?? 0) + 1 });
     }

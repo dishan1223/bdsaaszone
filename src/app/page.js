@@ -72,10 +72,11 @@ function SaleCardSkeleton() {
 }
 
 function StartupMobileCard({ startup, idx }) {
+  const startIdx = (startup._index || 0);
   return (
     <Link href={`/startups/${toSlug(startup.name)}`} className="block">
       <div className="flex items-center gap-3 p-3 rounded-xl border border-slate-200 bg-white hover:border-slate-300 transition-colors">
-        <span className="text-xs text-slate-400 font-mono w-5 shrink-0">{idx + 1}</span>
+        <span className="text-xs text-slate-400 font-mono w-5 shrink-0">{startIdx + 1}</span>
         <LogoSquare src={startup.logoUrl} name={startup.name} />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
@@ -156,24 +157,16 @@ function DashboardButton({ user }) {
 }
 
 function SearchDropdown({ query, startups, onClose }) {
+  // Note: With server-side pagination, 'startups' here only contains currently loaded items.
+  // For full search experience, this dropdown should ideally call the API, but we will use loaded items for instant feedback.
   const q = query.toLowerCase().trim();
   const matchedStartups = startups
     .filter((s) => s.name?.toLowerCase().includes(q) || s.description?.toLowerCase().includes(q))
     .slice(0, 4);
-  const founderMap = {};
-  for (const s of startups) {
-    if (!s.founder || !s.userId) continue;
-    if (!founderMap[s.userId]) founderMap[s.userId] = { ...s.founder, userId: s.userId, startupCount: 0 };
-    founderMap[s.userId].startupCount += 1;
-  }
-  const matchedFounders = Object.values(founderMap)
-    .filter((f) => f.name?.toLowerCase().includes(q))
-    .slice(0, 3);
-  const hasResults = matchedStartups.length > 0 || matchedFounders.length > 0;
 
   return (
     <div className="absolute top-full left-0 right-0 mt-1.5 bg-white border border-slate-200 rounded-xl shadow-lg overflow-hidden z-50">
-      {!hasResults && <div className="px-4 py-6 text-center text-sm text-slate-400">No results for "{query}"</div>}
+      {matchedStartups.length === 0 && <div className="px-4 py-6 text-center text-sm text-slate-400">Press Enter to search all</div>}
       {matchedStartups.length > 0 && (
         <div>
           <div className="px-3 pt-3 pb-1.5">
@@ -200,33 +193,12 @@ function SearchDropdown({ query, startups, onClose }) {
           ))}
         </div>
       )}
-      {matchedFounders.length > 0 && (
-        <div className={matchedStartups.length > 0 ? "border-t border-slate-100" : ""}>
-          <div className="px-3 pt-3 pb-1.5">
-            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Founders</span>
-          </div>
-          {matchedFounders.map((f) => (
-            <Link key={f.userId} href={`/founder/${f.userId}`} onClick={onClose}>
-              <div className="flex items-center gap-3 px-3 py-2.5 hover:bg-slate-50 transition-colors cursor-pointer">
-                <Avatar src={f.image} name={f.name} size={30} />
-                <div className="flex-1 min-w-0">
-                  <span className="text-sm font-medium text-slate-800 block truncate">{f.name}</span>
-                  <span className="text-xs text-slate-400">{f.startupCount} {f.startupCount === 1 ? "startup" : "startups"}</span>
-                </div>
-                <span className="text-xs text-slate-400 shrink-0">View profile →</span>
-              </div>
-            </Link>
-          ))}
-        </div>
-      )}
       <div className="px-3 py-2 border-t border-slate-100 bg-slate-50">
         <span className="text-xs text-slate-400">Press Enter to search all results</span>
       </div>
     </div>
   );
 }
-
-const PAGE_SIZE = 50;
 
 export default function Home() {
   const { data: session } = authClient.useSession();
@@ -235,22 +207,75 @@ export default function Home() {
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("all");
   const [startups, setStartups] = useState([]);
+  const [forSaleStartups, setForSaleStartups] = useState([]);
+  
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState("");
-  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  
+  const [page, setPage] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
+  
   const [searchFocused, setSearchFocused] = useState(false);
   const [submittedQuery, setSubmittedQuery] = useState("");
   const searchRef = useRef(null);
 
+  // Fetch "For Sale" Startups (Separate small fetch for the top section)
   useEffect(() => {
-    axios.get("/api/startups")
-      .then((res) => setStartups(res.data.startups ?? []))
-      .catch(() => setError("Failed to load startups."))
-      .finally(() => setLoading(false));
+    axios.get("/api/startups?forSale=true&limit=10")
+      .then((res) => setForSaleStartups(res.data.startups ?? []))
+      .catch(() => {});
   }, []);
 
-  useEffect(() => { setVisibleCount(PAGE_SIZE); }, [submittedQuery, category]);
+  // Main Fetch Logic
+  const fetchStartups = async (pageNum, reset = false) => {
+    if (reset) {
+      setLoading(true);
+    } else {
+      setLoadingMore(true);
+    }
 
+    try {
+      const params = new URLSearchParams();
+      params.append("page", pageNum);
+      if (category !== "all") params.append("category", category);
+      if (submittedQuery) params.append("search", submittedQuery);
+
+      const res = await axios.get(`/api/startups?${params.toString()}`);
+      const data = res.data;
+
+      setTotalItems(data.totalItems);
+      setHasMore(data.hasMore);
+
+      if (reset) {
+        setStartups(data.startups);
+      } else {
+        setStartups((prev) => [...prev, ...data.startups]);
+      }
+      setError("");
+    } catch (err) {
+      setError("Failed to load startups.");
+    } finally {
+      setLoading(false);
+      setLoadingMore(false);
+    }
+  };
+
+  // Initial Load & Filter Change
+  useEffect(() => {
+    setPage(1);
+    fetchStartups(1, true);
+  }, [category, submittedQuery]);
+
+  // Pagination Load More
+  useEffect(() => {
+    if (page > 1) {
+      fetchStartups(page, false);
+    }
+  }, [page]);
+
+  // Click outside handler
   useEffect(() => {
     const handler = (e) => { if (!searchRef.current?.contains(e.target)) setSearchFocused(false); };
     document.addEventListener("mousedown", handler);
@@ -258,24 +283,19 @@ export default function Home() {
   }, []);
 
   const handleSearchKeyDown = (e) => {
-    if (e.key === "Enter") { setSubmittedQuery(query); setSearchFocused(false); }
+    if (e.key === "Enter") { 
+      setSubmittedQuery(query); 
+      setSearchFocused(false); 
+    }
     if (e.key === "Escape") setSearchFocused(false);
   };
 
-  const clearSearch = () => { setQuery(""); setSubmittedQuery(""); setSearchFocused(false); };
+  const clearSearch = () => { 
+    setQuery(""); 
+    setSubmittedQuery(""); 
+  };
 
-  const activeQuery = submittedQuery || "";
-  const filtered = startups.filter((s) => {
-    const q = activeQuery.toLowerCase();
-    const matchesQuery = !q || s.name?.toLowerCase().includes(q) || s.description?.toLowerCase().includes(q) || s.founder?.name?.toLowerCase().includes(q);
-    return matchesQuery && (category === "all" || s.category === category);
-  });
-
-  const visible = filtered.slice(0, visibleCount);
-  const hasMore = filtered.length > visibleCount;
-  const forSale = startups.filter((s) => s.forSale);
   const showDropdown = searchFocused && query.trim().length >= 1;
-  const skeletonCount = 5;
 
   return (
     <div>
@@ -314,9 +334,9 @@ export default function Home() {
               <button className="btn border-none w-full sm:w-auto bg-slate-900 rounded-lg text-slate-50">+ Add Startup</button>
             </Link>
           </div>
-          {activeQuery && (
+          {submittedQuery && (
             <div className="flex items-center gap-2 text-sm text-slate-500">
-              <span>Results for <span className="font-medium text-slate-700">"{activeQuery}"</span></span>
+              <span>Results for <span className="font-medium text-slate-700">"{submittedQuery}"</span></span>
               <button onClick={clearSearch} className="flex items-center gap-1 text-xs text-slate-400 hover:text-slate-600 transition-colors border border-slate-200 rounded-full px-2 py-0.5">
                 <X size={11} /> Clear
               </button>
@@ -324,33 +344,20 @@ export default function Home() {
           )}
         </div>
 
-        {/* For Sale */}
-        {loading ? (
-          <div className="mt-10 sm:mt-14">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <div className="h-4 bg-slate-200 rounded w-20 animate-pulse"></div>
-                <div className="h-5 bg-slate-200 rounded-full w-8 animate-pulse"></div>
-              </div>
-              <div className="h-4 bg-slate-200 rounded w-16 animate-pulse"></div>
-            </div>
-            <div className="flex gap-3 overflow-x-auto pb-2" style={{ scrollbarWidth: "none" }}>
-              {Array.from({ length: 4 }).map((_, i) => <SaleCardSkeleton key={i} />)}
-            </div>
-          </div>
-        ) : forSale.length > 0 && !activeQuery && (
+        {/* For Sale Section */}
+        {forSaleStartups.length > 0 && !submittedQuery && (
           <div className="mt-10 sm:mt-14">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                 <span className="text-sm font-semibold text-slate-700">For Sale</span>
-                <span className="text-xs text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">{forSale.length}</span>
+                <span className="text-xs text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">{forSaleStartups.length}</span>
               </div>
               <Link href="/for-sale" className="flex items-center gap-1 text-xs text-slate-500 hover:text-slate-700 transition-colors">
                 View all <ChevronRight size={13} />
               </Link>
             </div>
             <div className="flex gap-3 overflow-x-auto pb-2" style={{ scrollbarWidth: "none" }}>
-              {forSale.map((s) => <SaleCard key={s._id} startup={s} />)}
+              {forSaleStartups.map((s) => <SaleCard key={s._id} startup={s} />)}
             </div>
           </div>
         )}
@@ -360,8 +367,8 @@ export default function Home() {
           <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
             <div className="flex items-center gap-2">
               <TrendingUp size={15} className="text-slate-500" />
-              <span className="text-sm font-semibold text-slate-700">{activeQuery ? "Search Results" : "All Startups"}</span>
-              {!loading && <span className="text-xs text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">{filtered.length}</span>}
+              <span className="text-sm font-semibold text-slate-700">{submittedQuery ? "Search Results" : "All Startups"}</span>
+              {!loading && <span className="text-xs text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">{totalItems}</span>}
               {loading && <div className="h-5 bg-slate-200 rounded-full w-8 animate-pulse"></div>}
             </div>
             <div className="relative">
@@ -374,49 +381,24 @@ export default function Home() {
             </div>
           </div>
 
-          {loading && (
-            <>
-              <div className="hidden sm:block overflow-x-auto rounded-xl border border-slate-300">
-                <table className="table w-full">
-                  <thead>
-                    <tr className="bg-slate-50 text-slate-500 text-xs uppercase tracking-wide border-b border-slate-200">
-                      <th className="w-10 font-medium py-3 pl-4 bg-transparent">#</th>
-                      <th className="font-medium py-3 bg-transparent">Startup</th>
-                      <th className="font-medium py-3 bg-transparent">Founder</th>
-                      <th className="font-medium py-3 bg-transparent">Category</th>
-                      <th className="font-medium py-3 pr-4 bg-transparent text-right">Likes</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {Array.from({ length: skeletonCount }).map((_, idx) => (
-                      <tr key={idx} className="border-b border-slate-100 bg-slate-50">
-                        <td className="pl-4 py-3 w-10 align-top pt-4 text-slate-400 text-sm font-mono">{idx + 1}</td>
-                        <td className="py-3"><div className="flex items-start gap-3"><div className="w-8 h-8 rounded-lg bg-slate-200 animate-pulse"></div><div className="flex flex-col gap-1"><div className="h-4 bg-slate-200 rounded w-32 animate-pulse"></div><div className="h-3 bg-slate-200 rounded w-48 animate-pulse"></div></div></div></td>
-                        <td className="py-3 align-top pt-4"><div className="flex items-center gap-2"><div className="w-7 h-7 rounded-full bg-slate-200 animate-pulse"></div><div className="h-4 bg-slate-200 rounded w-24 animate-pulse"></div></div></td>
-                        <td className="py-3 align-top pt-4"><div className="h-6 bg-slate-200 rounded-full w-20 animate-pulse"></div></td>
-                        <td className="py-3 pr-4 text-right align-top pt-4"><div className="flex items-center justify-end gap-1.5"><div className="w-3 h-3 bg-slate-200 rounded animate-pulse"></div><div className="h-4 bg-slate-200 rounded w-4 animate-pulse"></div></div></td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              <div className="flex flex-col gap-2 sm:hidden">
-                {Array.from({ length: skeletonCount }).map((_, idx) => <StartupMobileCardSkeleton key={idx} />)}
-              </div>
-            </>
+          {loading && startups.length === 0 && (
+             // Skeletons...
+             <div className="flex flex-col gap-2 sm:hidden">
+               {Array.from({ length: 5 }).map((_, idx) => <StartupMobileCardSkeleton key={idx} />)}
+             </div>
           )}
 
           {error && <div className="text-sm text-red-500 bg-red-50 border border-red-200 rounded-lg px-4 py-3">{error}</div>}
 
-          {!loading && !error && filtered.length === 0 && (
+          {!loading && !error && startups.length === 0 && (
             <div className="flex flex-col items-center py-16 gap-2 text-slate-400">
               <span className="text-3xl">🔍</span>
-              <span className="text-sm">No startups found{activeQuery ? ` for "${activeQuery}"` : ""}.</span>
-              {activeQuery && <button onClick={clearSearch} className="text-xs text-slate-500 hover:text-slate-700 underline mt-1">Clear search</button>}
+              <span className="text-sm">No startups found{submittedQuery ? ` for "${submittedQuery}"` : ""}.</span>
+              {submittedQuery && <button onClick={clearSearch} className="text-xs text-slate-500 hover:text-slate-700 underline mt-1">Clear search</button>}
             </div>
           )}
 
-          {!loading && !error && filtered.length > 0 && (
+          {startups.length > 0 && (
             <>
               {/* Desktop table */}
               <div className="hidden sm:block overflow-x-auto rounded-xl border border-slate-300">
@@ -431,7 +413,7 @@ export default function Home() {
                     </tr>
                   </thead>
                   <tbody>
-                    {visible.map((startup, idx) => (
+                    {startups.map((startup, idx) => (
                       <tr key={startup._id} onClick={() => window.location.href = `/startups/${toSlug(startup.name)}`}
                         className="border-b border-slate-100 bg-slate-50 hover:bg-slate-100 transition-colors cursor-pointer">
                         <td className="pl-4 py-3 text-sm text-slate-400 font-mono w-10 align-top pt-4">{idx + 1}</td>
@@ -441,7 +423,6 @@ export default function Home() {
                             <div className="flex flex-col gap-0.5 min-w-0">
                               <div className="flex items-center gap-2 flex-wrap">
                                 <span className="text-sm font-semibold text-slate-800 leading-tight">{startup.name}</span>
-                                {/* ── Rank badge injected here ── */}
                                 {startup.currentRank && <RankBadgeSmall rank={startup.currentRank} />}
                                 {startup.forSale && <ForSaleBadge />}
                               </div>
@@ -476,14 +457,17 @@ export default function Home() {
 
               {/* Mobile cards */}
               <div className="flex flex-col gap-2 sm:hidden">
-                {visible.map((startup, idx) => <StartupMobileCard key={startup._id} startup={startup} idx={idx} />)}
+                {startups.map((startup, idx) => <StartupMobileCard key={startup._id} startup={{...startup, _index: idx}} idx={idx} />)}
               </div>
 
               {hasMore && (
                 <div className="flex justify-center mt-6">
-                  <button onClick={() => setVisibleCount((c) => c + PAGE_SIZE)}
-                    className="flex items-center gap-2 text-sm text-slate-600 bg-slate-50 border border-slate-300 hover:border-slate-400 hover:bg-slate-100 transition-colors px-5 py-2.5 rounded-lg">
-                    Show {Math.min(PAGE_SIZE, filtered.length - visibleCount)} more
+                  <button 
+                    onClick={() => setPage((p) => p + 1)} 
+                    disabled={loadingMore}
+                    className="flex items-center gap-2 text-sm text-slate-600 bg-slate-50 border border-slate-300 hover:border-slate-400 hover:bg-slate-100 transition-colors px-5 py-2.5 rounded-lg disabled:opacity-50"
+                  >
+                    {loadingMore ? "Loading..." : "Show more"}
                     <ChevronDown size={14} />
                   </button>
                 </div>

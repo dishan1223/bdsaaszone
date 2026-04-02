@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import clientPromise from "@/lib/mongodb";
 import { v2 as cloudinary } from "cloudinary";
 import { headers } from "next/headers";
+import { invalidateStartupsCache } from "@/lib/redis"; // Import cache helper
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -10,7 +11,6 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-// max size of logo image. can be increased on user demand
 const MAX_LOGO_BYTES = 2 * 1024 * 1024;
 
 export async function POST(req) {
@@ -24,7 +24,6 @@ export async function POST(req) {
     }
     const userId = session.user.id;
 
-    // NOTE: maybe this hard work can be optimized
     const formData = await req.formData();
 
     const name             = formData.get("name")?.trim();
@@ -67,7 +66,6 @@ export async function POST(req) {
       );
     }
 
-
     if (forSale && seekingCofounder) {
       return NextResponse.json(
         { message: "A startup cannot be listed for sale while seeking a co-founder." },
@@ -102,7 +100,6 @@ export async function POST(req) {
       logoPublicId = uploadResult.public_id;
     }
 
-
     const client = await clientPromise;
     const db = client.db(process.env.DB);
     const collection = db.collection("startups");
@@ -126,6 +123,10 @@ export async function POST(req) {
     };
 
     const result = await collection.insertOne(doc);
+
+    // ── Clear Redis Cache ─────────────────────────────
+    // This ensures the new startup appears immediately on the homepage
+    await invalidateStartupsCache();
 
     return NextResponse.json(
       { message: "Startup submitted successfully!", id: result.insertedId },
