@@ -261,10 +261,20 @@ export default function NewStartupPage() {
               </button>
             </div>
           ) : (
-            <div onClick={() => fileInputRef.current?.click()}
+            <div 
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={(e) => {
+                e.preventDefault();
+                const file = e.dataTransfer.files[0];
+                if (file) {
+                  setLogo(file);
+                  setLogoPreview(URL.createObjectURL(file));
+                }
+              }}
+              onClick={() => fileInputRef.current?.click()}
               className="flex flex-col items-center justify-center gap-2 w-full h-32 rounded-lg bg-slate-50 border-2 border-dashed border-slate-300 cursor-pointer hover:border-slate-400 hover:bg-slate-100 transition-all">
               <Upload size={20} color="#94a3b8" />
-              <span className="text-sm text-slate-400">Click to upload logo</span>
+              <span className="text-sm text-slate-400">Click or drag to upload logo</span>
               <span className="text-xs text-slate-400">PNG, JPG, SVG up to 2MB</span>
             </div>
           )}
