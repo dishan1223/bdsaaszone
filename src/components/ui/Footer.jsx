@@ -29,6 +29,7 @@ export default function Footer() {
               { href: "/", label: "Home" },
               { href: "/login", label: "Login" },
               { href: "/dashboard", label: "Dashboard" },
+              { href: "/docs/badge", label : "Ranking Badge Widget"},
               { href: "/for-sale", label: "SaaS For Sale" },
               { href: "/new", label: "Add Startup" },
             ].map(({ href, label }) => (
