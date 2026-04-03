@@ -37,20 +37,15 @@ export async function invalidateStartupsCache() {
   if (!client) return;
 
   try {
-    // Scan for all keys starting with "startups:"
-    let cursor = 0;
-    do {
-      // Note: node-redis v4 syntax for scan
-      const reply = await client.scan(cursor, { MATCH: "startups:*", COUNT: 100 });
-      cursor = reply.cursor;
-      const keys = reply.keys;
-      
-       if (keys.length > 0) {
-         await client.del(keys);
-       }
-     } while (cursor !== 0);
-     
-     console.log("Cache invalidated");
+    // scanIterator handles the loop internally
+    for await (const key of client.scanIterator({
+      MATCH: "startups:*", // scanIterator supports uppercase or lowercase depending on version, but lowercase is safer
+      COUNT: 100
+    })) {
+      await client.del(key);
+    }
+    
+    console.log("Cache invalidated");
   } catch (e) {
     console.error("Failed to invalidate cache", e);
   }

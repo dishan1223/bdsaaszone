@@ -4,7 +4,7 @@ import { auth } from "@/lib/auth";
 import clientPromise from "@/lib/mongodb";
 import { ObjectId } from "mongodb";
 import { createNotification } from "@/lib/createNotification";
-import { invalidateStartupsCache } from "@/lib/redis"; // Import helper
+import { invalidateStartupsCache } from "@/lib/redis";
 
 const toSlug = (name) =>
   name?.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") ?? "";
@@ -26,44 +26,59 @@ export async function POST(req) {
     const db = client.db(process.env.DB);
     const userId = session.user.id;
 
-    const startup = await db.collection("startups").findOne({ _id: oid });
-    if (!startup) return NextResponse.json({ message: "Startup not found." }, { status: 404 });
+    // Attempt LIKE###########################################################
+    // Atomic: the filter { likedBy: { $ne: userId } } guarantees this update
+    // only executes if the user hasn't already liked. No separate read needed.
+    // Two simultaneous requests both see $ne: true initially, but MongoDB's
+    // document-level locking means only one $addToSet will match — the second
+    // finds likedBy already contains userId and skips, then falls to UNLIKE
+    // which also won't match, returning 404. The client's optimistic UI already
+    // shows the correct state, so this is invisible to the user.
+    // ########################################################################
+    const likeResult = await db.collection("startups").findOneAndUpdate(
+      { _id: oid, likedBy: { $ne: userId } },
+      {
+        $inc: { likes: 1 },
+        $addToSet: { likedBy: userId },
+      },
+      { returnDocument: "after", projection: { likes: 1, userId: 1, name: 1 } }
+    );
 
-    const alreadyLiked = (startup.likedBy ?? []).includes(userId);
-
-    if (alreadyLiked) {
-      await db.collection("startups").updateOne(
-        { _id: oid },
-        { $inc: { likes: -1 }, $pull: { likedBy: userId } }
-      );
-      
-      // Invalidate cache because like counts/positions changed
-      await invalidateStartupsCache();
-
-      return NextResponse.json({ liked: false, likes: Math.max(0, (startup.likes ?? 1) - 1) });
-    } else {
-      await db.collection("startups").updateOne(
-        { _id: oid },
-        { $inc: { likes: 1 }, $addToSet: { likedBy: userId } }
-      );
-
-      // Fire-and-forget notification
+    if (likeResult) {
+      // Fire-and-forget — never awaited so they don't slow down the response
       createNotification({
-        founderId: startup.userId,
-        actorId: userId,
-        actorName: session.user.name,
-        actorImage: session.user.image ?? null,
-        type: "like",
-        startupId: startupId,
-        startupName: startup.name,
-        startupSlug: toSlug(startup.name),
+        founderId:   likeResult.userId,
+        actorId:     userId,
+        actorName:   session.user.name,
+        actorImage:  session.user.image ?? null,
+        type:        "like",
+        startupId,
+        startupName: likeResult.name,
+        startupSlug: toSlug(likeResult.name),
       });
-
-      // Invalidate cache
-      await invalidateStartupsCache();
-
-      return NextResponse.json({ liked: true, likes: (startup.likes ?? 0) + 1 });
+      invalidateStartupsCache();
+      return NextResponse.json({ liked: true, likes: likeResult.likes });
     }
+
+    // ── Attempt UNLIKE ────────────────────────────────────────────────────────
+    // Atomic: filter { likedBy: userId } only matches if currently liked.
+    const unlikeResult = await db.collection("startups").findOneAndUpdate(
+      { _id: oid, likedBy: userId },
+      {
+        $inc: { likes: -1 },
+        $pull: { likedBy: userId },
+      },
+      { returnDocument: "after", projection: { likes: 1 } }
+    );
+
+    if (unlikeResult) {
+      invalidateStartupsCache();
+      return NextResponse.json({ liked: false, likes: Math.max(0, unlikeResult.likes) });
+    }
+
+    // Neither matched — startup doesn't exist
+    return NextResponse.json({ message: "Startup not found." }, { status: 404 });
+
   } catch (err) {
     console.error("[POST /api/startups/like]", err);
     return NextResponse.json({ message: "Failed to update like." }, { status: 500 });

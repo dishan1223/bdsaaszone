@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth";
 import clientPromise from "@/lib/mongodb";
 import { ObjectId } from "mongodb";
 import { v2 as cloudinary } from "cloudinary";
+import { invalidateStartupsCache } from "@/lib/redis";
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -43,6 +44,8 @@ export async function DELETE(req, { params }) {
     }
 
     await db.collection("startups").deleteOne({ _id: oid });
+
+    await invalidateStartupsCache()
 
     return NextResponse.json({ message: "Startup deleted successfully." });
   } catch (err) {
