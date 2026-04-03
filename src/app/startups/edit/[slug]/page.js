@@ -528,7 +528,7 @@ export default function EditStartupPage() {
             Want to grab more attention? Advertise your startup on our homepage sidebars for just <span className="font-bold text-blue-600">৳120 / month</span>.
           </p>
           <a 
-            href="https://wa.me/8801700000000?text=I'm%20interested%20in%20advertising%20my%20SaaS%20on%20BD%20SaaS%20Zone" 
+            href="https://wa.me/8801773153889?text=I'm%20interested%20in%20advertising%20my%20SaaS%20on%20BD%20SaaS%20Zone" 
             target="_blank" 
             rel="noopener noreferrer"
             className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-blue-200 rounded-lg text-sm font-bold text-blue-600 hover:bg-blue-600 hover:text-white transition-all shadow-sm"

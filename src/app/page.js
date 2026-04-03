@@ -33,7 +33,7 @@ function LogoSquare({ src, name, size = 32 }) {
 
 function PromotionScroller({ startups }) {
   if (!startups.length) return (
-    <Link href="https://wa.me/8801700000000" className="flex items-center justify-center gap-2 py-1.5 bg-slate-50 border-b border-slate-200">
+    <Link href="https://wa.me/8801773153889" className="flex items-center justify-center gap-2 py-1.5 bg-slate-50 border-b border-slate-200">
       <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Promote your SaaS for ৳120/mo</span>
     </Link>
   );
@@ -100,7 +100,7 @@ function PromotionSidebar({ startups, side = "left" }) {
       ))}
 
       {displayStartups.length < 5 && Array.from({ length: 5 - displayStartups.length }).map((_, i) => (
-        <Link key={i} href="https://wa.me/8801700000000" className="block p-1.5 border-2 border-dashed border-slate-300 rounded-lg hover:border-blue-400 hover:bg-white transition-all text-center group">
+        <Link key={i} href="https://wa.me/8801773153889" className="block p-1.5 border-2 border-dashed border-slate-300 rounded-lg hover:border-blue-400 hover:bg-white transition-all text-center group">
           <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tight group-hover:text-blue-600 transition-colors">৳120 Slot</p>
         </Link>
       ))}
@@ -207,7 +207,7 @@ function DashboardButton({ user }) {
   const [hovered, setHovered] = useState(false);
   return (
     <div className="fixed top-12 right-4 xl:top-4 z-[70] flex items-center gap-2">
-      <Link href="https://wa.me/8801700000000?text=I'm%20interested%20in%20advertising%20my%20SaaS%20on%20BD%20SaaS%20Zone" target="_blank">
+      <Link href="https://wa.me/8801773153889?text=I'm%20interested%20in%20advertising%20my%20SaaS%20on%20BD%20SaaS%20Zone" target="_blank">
         <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-full transition-all shadow-md group">
           <Rocket size={14} className="group-hover:animate-bounce" />
           <span className="text-xs font-bold hidden sm:block">Advertise ৳120</span>
