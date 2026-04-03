@@ -30,8 +30,16 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
+      <head>
+        <link
+          rel="stylesheet"
+          href="https://cdn.jsdelivr.net/gh/1dev-hridoy/1dev-hridoy/buy-me-a-cha-style.css"
+        />
+      </head>
       <body
+
         className={`${gabarito.className} antialiased bg-slate-200`}
+        
       >
         {children}
       </body>
