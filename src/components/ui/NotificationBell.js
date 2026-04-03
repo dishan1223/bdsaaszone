@@ -130,7 +130,7 @@ export default function NotificationBell({ userId }) {
   const pushBlocked = permission === "denied";
 
   return (
-    <div ref={modalRef} className="fixed top-4 left-4 z-50">
+    <div ref={modalRef} className="relative">
       {/* Bell button */}
       <button
         onClick={handleOpen}

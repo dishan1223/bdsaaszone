@@ -182,7 +182,7 @@ export default async function StartupPage({ params }) {
 
         <div className="mb-8">
           <h2 className="text-sm font-semibold text-slate-700 mb-2">About</h2>
-          <p className="text-slate-600 text-sm leading-relaxed">{startup.description}</p>
+          <p className="text-slate-600 text-sm leading-relaxed whitespace-pre-wrap">{startup.description}</p>
         </div>
 
         <div className="mb-8">

@@ -12,9 +12,12 @@ export async function GET(req) {
   const category = searchParams.get("category") || "all";
   const search = searchParams.get("search") || "";
   const forSaleOnly = searchParams.get("forSale") === "true";
+  const newlyAdded = searchParams.get("newlyAdded") === "true";
+  const seekingCofounder = searchParams.get("seekingCofounder") === "true";
+  const advertisedOnly = searchParams.get("advertised") === "true";
 
   // Construct Cache Key
-  const cacheKey = `startups:${page}:${category}:${search}:${forSaleOnly}`;
+  const cacheKey = `startups:${page}:${category}:${search}:${forSaleOnly}:${newlyAdded}:${seekingCofounder}:${advertisedOnly}`;
 
   try {
     const redisClient = await getRedisClient();
@@ -35,6 +38,16 @@ export async function GET(req) {
     const query = {};
     if (category !== "all") query.category = category;
     if (forSaleOnly) query.forSale = true;
+    if (seekingCofounder) query.seekingCofounder = true;
+    if (advertisedOnly) {
+      query.isAdvertised = true;
+      query.advertisedUntil = { $gte: new Date() };
+    }
+    if (newlyAdded) {
+      const threeDaysAgo = new Date();
+      threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
+      query.createdAt = { $gte: threeDaysAgo };
+    }
     if (search) {
       query.$or = [
         { name: { $regex: search, $options: "i" } },
@@ -46,10 +59,11 @@ export async function GET(req) {
     const total = await db.collection("startups").countDocuments(query);
 
     // Fetch Paginated Startups
+    const sort = newlyAdded ? { createdAt: -1 } : { likes: -1 };
     const startups = await db
       .collection("startups")
       .find(query)
-      .sort({ likes: -1 })
+      .sort(sort)
       .skip((page - 1) * ITEMS_PER_PAGE)
       .limit(ITEMS_PER_PAGE)
       .toArray();
@@ -78,6 +92,8 @@ export async function GET(req) {
       _id: s._id.toString(),
       likes: s.likes ?? 0,
       founder: userMap[s.userId] ?? null,
+      // Only show as advertised if the date hasn't passed
+      isAdvertised: s.isAdvertised && s.advertisedUntil && new Date(s.advertisedUntil) > new Date(),
     }));
 
     const response = {

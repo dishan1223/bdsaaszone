@@ -9,7 +9,9 @@ export default async function sitemap() {
   // Base routes
   const routes = [
     '',
+    '/startups',
     '/for-sale',
+    '/co-founders',
     '/docs/badge',
   ].map((route) => ({
     url: `${APP_URL}${route}`,
