@@ -16,6 +16,44 @@ import { CATEGORY_LABELS, PRODUCT_TYPE_LABELS } from "@/constants/constants.js";
 const toSlug = (name) =>
   name?.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") ?? "";
 
+export async function generateMetadata({ params }) {
+  const { slug } = await params;
+  const startup = await getStartup(slug);
+  
+  if (!startup) {
+    return {
+      title: "Startup Not Found",
+    };
+  }
+
+  const title = `${startup.name} | BD SaaS Zone`;
+  const description = startup.description || `Check out ${startup.name} on BD SaaS Zone.`;
+  const image = startup.logoUrl || "/logo.svg";
+
+  return {
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      type: "website",
+      url: `/startups/${slug}`,
+      images: [
+        {
+          url: image,
+          alt: startup.name,
+        },
+      ],
+    },
+    twitter: {
+      card: "summary",
+      title,
+      description,
+      images: [image],
+    },
+  };
+}
+
 async function getStartup(slug) {
   const client = await clientPromise;
   const db = client.db(process.env.DB);

@@ -308,12 +308,12 @@ export default function Home() {
             <Image src="/logo.svg" alt="logo" width={20} height={20} />
             BD SaaS Zone
           </div>
-          <div className="text-slate-800 font-bold text-3xl sm:text-5xl text-center leading-tight">
+          <h1 className="text-slate-800 font-bold text-3xl sm:text-5xl text-center leading-tight">
             A Database of SaaS products
             <br className="hidden sm:block" />
             <span className="sm:hidden"> </span>
             from Bangladesh
-          </div>
+          </h1>
           <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
             <div ref={searchRef} className="relative flex-1 sm:flex-none sm:w-96">
               <div className="flex items-center p-2 rounded-lg bg-slate-50 border border-slate-300 focus-within:border-slate-500 transition-colors">
