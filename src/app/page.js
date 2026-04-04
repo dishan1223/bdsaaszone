@@ -2,7 +2,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Search, Heart, TrendingUp, ChevronRight, ChevronDown, LayoutDashboard, X, Sparkles, Quote as QuoteIcon, DollarSign, Users, Rocket } from "lucide-react";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { authClient } from "@/lib/auth-client";
 import axios from "axios";
 import { CATEGORY_LABELS } from "@/constants/constants.js";
@@ -21,6 +21,16 @@ function ForSaleBadge() {
   );
 }
 
+// ── Ad badge ──────────────────────────────────────────────────────────────────
+function AdBadge() {
+  return (
+    <span style={{ background: "#eff6ff", color: "#2563eb", border: "1px solid #bfdbfe" }}
+      className="text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider shrink-0">
+      Ad
+    </span>
+  );
+}
+
 function LogoSquare({ src, name, size = 32 }) {
   const style = { width: size, height: size, flexShrink: 0 };
   if (src) return <img src={src} alt={name} style={style} className="rounded-lg object-cover border border-slate-200" />;
@@ -31,6 +41,7 @@ function LogoSquare({ src, name, size = 32 }) {
   );
 }
 
+// ── Promotion scroller (mobile top bar) ───────────────────────────────────────
 function PromotionScroller({ startups }) {
   if (!startups.length) return (
     <Link href="https://wa.me/8801773153889" className="flex items-center justify-center gap-2 py-1.5 bg-slate-50 border-b border-slate-200">
@@ -42,7 +53,7 @@ function PromotionScroller({ startups }) {
     <div className="bg-white border-b border-slate-200 h-8 overflow-hidden relative">
       <div className="flex animate-horizontal-scroll w-fit whitespace-nowrap">
         {[...startups, ...startups, ...startups].map((s, i) => (
-          <Link key={s._id + i} href={`/startups/${toSlug(s.name)}`} 
+          <Link key={s._id + i} href={`/startups/${toSlug(s.name)}`}
             className="flex items-center gap-2 h-8 px-6 shrink-0 border-r border-slate-100 last:border-r-0">
             <img src={s.logoUrl} alt="" className="w-4 h-4 rounded shadow-sm shrink-0" />
             <span className="text-[10px] font-black text-slate-800 uppercase tracking-tight">{s.name}</span>
@@ -58,50 +69,89 @@ function PromotionScroller({ startups }) {
         .animate-horizontal-scroll {
           animation: horizontal-scroll ${startups.length * 5}s linear infinite;
         }
-        .animate-horizontal-scroll:hover {
-          animation-play-state: paused;
-        }
+        .animate-horizontal-scroll:hover { animation-play-state: paused; }
       `}</style>
     </div>
   );
 }
 
-function PromotionSidebar({ startups, side = "left" }) {
+// ── Promotion sidebar (desktop) — BIGGER with description ─────────────────────
+function PromotionSidebar({ startups }) {
   const [offset, setOffset] = useState(0);
 
   useEffect(() => {
-    if (startups.length <= 5) return;
+    if (startups.length <= 4) return;
     const interval = setInterval(() => {
       setOffset((prev) => (prev + 1) % startups.length);
     }, 5000);
     return () => clearInterval(interval);
   }, [startups]);
 
-  const displayStartups = [];
+  const display = [];
   if (startups.length > 0) {
-    for (let i = 0; i < Math.min(5, startups.length); i++) {
-      displayStartups.push(startups[(offset + i) % startups.length]);
+    for (let i = 0; i < Math.min(4, startups.length); i++) {
+      display.push(startups[(offset + i) % startups.length]);
     }
   }
 
+  const emptySlots = Math.max(0, 4 - display.length);
+
   return (
-    <div className="flex flex-col gap-2">
-      <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest text-center mb-1">Promoted</p>
-      
-      {displayStartups.map((s) => (
+    <div className="flex flex-col gap-2.5">
+      {/* Header */}
+      <div className="flex items-center justify-between px-0.5">
+        <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Sponsored</span>
+        <Link href="https://wa.me/8801773153889" className="text-[9px] font-bold text-blue-500 hover:underline">
+          Advertise →
+        </Link>
+      </div>
+
+      {/* Ad cards */}
+      {display.map((s) => (
         <Link key={s._id} href={`/startups/${toSlug(s.name)}`} className="group block">
-          <div className="p-1.5 bg-white border border-slate-200 rounded-lg hover:border-blue-400 hover:shadow-sm transition-all duration-300">
-            <div className="flex items-center gap-2">
-              <LogoSquare src={s.logoUrl} name={s.name} size={20} />
-              <h3 className="text-[10px] font-bold text-slate-700 group-hover:text-blue-600 transition-colors truncate">{s.name}</h3>
+          <div className="p-3 bg-white border border-blue-100 rounded-xl hover:border-blue-300 hover:shadow-md transition-all duration-300">
+            {/* Logo + name row */}
+            <div className="flex items-center gap-2.5 mb-2">
+              <LogoSquare src={s.logoUrl} name={s.name} size={28} />
+              <div className="flex-1 min-w-0">
+                <h3 className="text-xs font-bold text-slate-800 group-hover:text-blue-600 transition-colors truncate leading-tight">
+                  {s.name}
+                </h3>
+                <span className="text-[9px] font-semibold text-blue-500 uppercase tracking-tight">
+                  {CATEGORY_LABELS[s.category] ?? s.category}
+                </span>
+              </div>
+              <AdBadge />
+            </div>
+            {/* Description */}
+            {s.description && (
+              <p className="text-[10px] text-slate-500 leading-relaxed line-clamp-2">
+                {s.description}
+              </p>
+            )}
+            {/* Footer row */}
+            <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-100">
+              <div className="flex items-center gap-1 text-slate-400">
+                <Heart size={9} />
+                <span className="text-[9px] tabular-nums">{s.likes ?? 0}</span>
+              </div>
+              <span className="text-[9px] font-bold text-blue-500 group-hover:underline">
+                Visit →
+              </span>
             </div>
           </div>
         </Link>
       ))}
 
-      {displayStartups.length < 5 && Array.from({ length: 5 - displayStartups.length }).map((_, i) => (
-        <Link key={i} href="https://wa.me/8801773153889" className="block p-1.5 border-2 border-dashed border-slate-300 rounded-lg hover:border-blue-400 hover:bg-white transition-all text-center group">
-          <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tight group-hover:text-blue-600 transition-colors">৳120 Slot</p>
+      {/* Empty slots */}
+      {Array.from({ length: emptySlots }).map((_, i) => (
+        <Link key={`empty-${i}`} href="https://wa.me/8801773153889" className="block">
+          <div className="p-3 border-2 border-dashed border-slate-200 rounded-xl hover:border-blue-300 hover:bg-blue-50/50 transition-all text-center group">
+            <p className="text-[10px] font-bold text-slate-400 group-hover:text-blue-600 transition-colors">
+              Your startup here
+            </p>
+            <p className="text-[9px] text-slate-300 mt-0.5">৳120/month</p>
+          </div>
         </Link>
       ))}
     </div>
@@ -134,31 +184,35 @@ function SaleCardSkeleton() {
   return (
     <div className="w-40 sm:w-44 p-3 rounded-xl bg-white border border-slate-300 flex flex-col gap-2.5">
       <div className="flex items-center gap-2">
-        <div className="w-8 h-8 rounded-lg bg-slate-200 animate-pulse"></div>
-        <div className="h-4 bg-slate-200 rounded w-24 animate-pulse"></div>
+        <div className="w-8 h-8 rounded-lg bg-slate-200 animate-pulse" />
+        <div className="h-4 bg-slate-200 rounded w-24 animate-pulse" />
       </div>
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-1">
-          <div className="w-3 h-3 bg-slate-200 rounded animate-pulse"></div>
-          <div className="h-3 bg-slate-200 rounded w-4 animate-pulse"></div>
+          <div className="w-3 h-3 bg-slate-200 rounded animate-pulse" />
+          <div className="h-3 bg-slate-200 rounded w-4 animate-pulse" />
         </div>
-        <div className="h-3 bg-slate-200 rounded w-16 animate-pulse"></div>
+        <div className="h-3 bg-slate-200 rounded w-16 animate-pulse" />
       </div>
     </div>
   );
 }
 
-function StartupMobileCard({ startup, idx }) {
-  const startIdx = (startup._index || 0);
+function StartupMobileCard({ startup, idx, isAd = false }) {
   return (
     <Link href={`/startups/${toSlug(startup.name)}`} className="block">
-      <div className="flex items-center gap-3 p-3 rounded-xl border border-slate-200 bg-white hover:border-slate-300 transition-colors">
-        <span className="text-xs text-slate-400 font-mono w-5 shrink-0">{startIdx + 1}</span>
+      <div className={`flex items-center gap-3 p-3 rounded-xl border bg-white hover:border-slate-300 transition-colors ${
+        isAd ? "border-blue-200 shadow-sm shadow-blue-50" : "border-slate-200"
+      }`}>
+        <span className="text-xs text-slate-400 font-mono w-5 shrink-0">
+          {isAd ? "·" : (startup._index ?? idx) + 1}
+        </span>
         <LogoSquare src={startup.logoUrl} name={startup.name} />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-sm font-semibold text-slate-800 truncate">{startup.name}</span>
-            {startup.currentRank && <RankBadgeMobile rank={startup.currentRank} />}
+            {isAd && <AdBadge />}
+            {!isAd && startup.currentRank && <RankBadgeMobile rank={startup.currentRank} />}
             {startup.forSale && <ForSaleBadge />}
           </div>
           {startup.description && (
@@ -184,23 +238,103 @@ function StartupMobileCard({ startup, idx }) {
 function StartupMobileCardSkeleton() {
   return (
     <div className="flex items-center gap-3 p-3 rounded-xl border border-slate-200 bg-white">
-      <div className="w-5 h-4 bg-slate-200 rounded animate-pulse"></div>
-      <div className="w-8 h-8 rounded-lg bg-slate-200 animate-pulse"></div>
+      <div className="w-5 h-4 bg-slate-200 rounded animate-pulse" />
+      <div className="w-8 h-8 rounded-lg bg-slate-200 animate-pulse" />
       <div className="flex-1 min-w-0">
-        <div className="h-4 bg-slate-200 rounded w-24 mb-1 animate-pulse"></div>
-        <div className="h-3 bg-slate-200 rounded w-full mb-1 animate-pulse"></div>
+        <div className="h-4 bg-slate-200 rounded w-24 mb-1 animate-pulse" />
+        <div className="h-3 bg-slate-200 rounded w-full mb-1 animate-pulse" />
         <div className="flex items-center gap-2 mt-1">
-          <div className="h-3 bg-slate-200 rounded w-16 animate-pulse"></div>
-          <div className="h-3 bg-slate-200 rounded w-1 animate-pulse"></div>
-          <div className="h-3 bg-slate-200 rounded w-16 animate-pulse"></div>
+          <div className="h-3 bg-slate-200 rounded w-16 animate-pulse" />
+          <div className="h-3 bg-slate-200 rounded w-1 animate-pulse" />
+          <div className="h-3 bg-slate-200 rounded w-16 animate-pulse" />
         </div>
       </div>
       <div className="flex items-center gap-1">
-        <div className="w-3 h-3 bg-slate-200 rounded animate-pulse"></div>
-        <div className="h-3 bg-slate-200 rounded w-4 animate-pulse"></div>
+        <div className="w-3 h-3 bg-slate-200 rounded animate-pulse" />
+        <div className="h-3 bg-slate-200 rounded w-4 animate-pulse" />
       </div>
     </div>
   );
+}
+
+// ── Ad row for desktop table ───────────────────────────────────────────────────
+function AdTableRow({ startup }) {
+  return (
+    <tr
+      onClick={() => window.location.href = `/startups/${toSlug(startup.name)}`}
+      className="border-b border-blue-50 bg-blue-50/40 hover:bg-blue-50 transition-colors cursor-pointer"
+      style={{ borderLeft: "2px solid #bfdbfe" }}
+    >
+      <td className="pl-4 py-3 text-sm text-blue-300 font-mono w-10 align-top pt-4">·</td>
+      <td className="py-3">
+        <div className="flex items-start gap-3">
+          <LogoSquare src={startup.logoUrl} name={startup.name} />
+          <div className="flex flex-col gap-0.5 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-sm font-semibold text-slate-800 leading-tight">{startup.name}</span>
+              <AdBadge />
+              {startup.forSale && <ForSaleBadge />}
+            </div>
+            {startup.description && (
+              <span className="text-xs text-slate-400 leading-relaxed">
+                {startup.description.length > 37 ? startup.description.slice(0, 37) + "..." : startup.description}
+              </span>
+            )}
+          </div>
+        </div>
+      </td>
+      <td className="py-3 align-top pt-4">
+        <div className="flex items-center gap-2">
+          <Avatar src={startup.founder?.image} name={startup.founder?.name} size={28} />
+          <span className="text-sm text-slate-600">{startup.founder?.name ?? "Unknown"}</span>
+        </div>
+      </td>
+      <td className="py-3 align-top pt-4">
+        <span className="text-xs text-slate-500 bg-slate-100 px-2.5 py-1 rounded-full">
+          {CATEGORY_LABELS[startup.category] ?? startup.category}
+        </span>
+      </td>
+      <td className="py-3 pr-4 text-right align-top pt-4">
+        <div className="flex items-center justify-end gap-1.5 text-slate-500">
+          <Heart size={13} className="text-slate-400" />
+          <span className="text-sm tabular-nums">{startup.likes ?? 0}</span>
+        </div>
+      </td>
+    </tr>
+  );
+}
+
+// ── Inject ads into leaderboard at random positions 3–30 ─────────────────────
+function useLeaderboardWithAds(startups, ads) {
+  return useMemo(() => {
+    if (!ads.length || !startups.length) return startups;
+
+    // Determine how many ads to inject (max 1 per 5 organic rows, max 5 total)
+    const maxAds = Math.min(ads.length, Math.floor(startups.length / 5), 5);
+    if (maxAds === 0) return startups;
+
+    // Pick random positions between index 2 (pos 3) and min(29, length-1)
+    const maxPos = Math.min(29, startups.length - 1);
+    if (maxPos < 2) return startups;
+
+    const positions = new Set();
+    let attempts = 0;
+    while (positions.size < maxAds && attempts < 100) {
+      positions.add(2 + Math.floor(Math.random() * (maxPos - 1)));
+      attempts++;
+    }
+
+    // Build merged list
+    const sorted = [...positions].sort((a, b) => a - b);
+    const result = [...startups];
+    sorted.forEach((pos, i) => {
+      if (i < ads.length) {
+        result.splice(pos + i, 0, { ...ads[i], _isAd: true });
+      }
+    });
+
+    return result;
+  }, [startups, ads]);
 }
 
 function DashboardButton({ user }) {
@@ -214,19 +348,12 @@ function DashboardButton({ user }) {
         </div>
       </Link>
       <Link href="/dashboard">
-        <div
-          className="flex items-center gap-2.5"
-          onMouseEnter={() => setHovered(true)}
-          onMouseLeave={() => setHovered(false)}
-        >
-          <div
-            className="flex flex-col items-end overflow-hidden transition-all duration-200 ease-out"
-            style={{ maxWidth: hovered ? "160px" : "0px", opacity: hovered ? 1 : 0 }}
-          >
+        <div className="flex items-center gap-2.5"
+          onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}>
+          <div className="flex flex-col items-end overflow-hidden transition-all duration-200 ease-out"
+            style={{ maxWidth: hovered ? "160px" : "0px", opacity: hovered ? 1 : 0 }}>
             <span className="text-xs font-semibold text-slate-700 whitespace-nowrap pr-1">My Dashboard</span>
-            <span className="text-xs text-slate-400 whitespace-nowrap pr-1 truncate max-w-[140px]">
-              {user?.name ?? user?.email ?? ""}
-            </span>
+            <span className="text-xs text-slate-400 whitespace-nowrap pr-1 truncate max-w-[140px]">{user?.name ?? user?.email ?? ""}</span>
           </div>
           <div className="flex items-center justify-center w-9 h-9 rounded-full bg-white border border-slate-200 shadow-sm hover:shadow-md hover:border-slate-300 transition-all duration-200">
             {user?.image ? (
@@ -247,7 +374,7 @@ function SearchDropdown({ query, startups, onClose }) {
     .filter((s) => {
       const categoryLabel = CATEGORY_LABELS[s.category] || "";
       return (
-        s.name?.toLowerCase().includes(q) || 
+        s.name?.toLowerCase().includes(q) ||
         s.description?.toLowerCase().includes(q) ||
         s.founder?.name?.toLowerCase().includes(q) ||
         categoryLabel.toLowerCase().includes(q)
@@ -267,7 +394,6 @@ function SearchDropdown({ query, startups, onClose }) {
         <div>
           <div className="px-4 pt-4 pb-2 border-b border-slate-50 flex items-center justify-between">
             <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Top Results</span>
-            <Link href="/startups" onClick={onClose} className="text-[10px] font-black text-blue-500 uppercase tracking-widest hover:underline">View All</Link>
           </div>
           <div className="max-h-[350px] overflow-y-auto">
             {matchedStartups.map((s) => (
@@ -310,35 +436,32 @@ export default function Home() {
   const [newlyAddedStartups, setNewlyAddedStartups] = useState([]);
   const [advertisedStartups, setAdvertisedStartups] = useState([]);
   const [quote, setQuote] = useState(null);
-  
+
   const [loading, setLoading] = useState(true);
   const [loadingNew, setLoadingNew] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState("");
-  
+
   const [page, setPage] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
   const [hasMore, setHasMore] = useState(false);
-  
+
   const [searchFocused, setSearchFocused] = useState(false);
   const [submittedQuery, setSubmittedQuery] = useState("");
   const searchRef = useRef(null);
 
-  // Fetch Advertised Startups
   useEffect(() => {
     axios.get("/api/startups?advertised=true&limit=50")
       .then((res) => setAdvertisedStartups(res.data.startups ?? []))
       .catch(() => {});
   }, []);
 
-  // Fetch "For Sale" Startups
   useEffect(() => {
     axios.get("/api/startups?forSale=true&limit=10")
       .then((res) => setForSaleStartups(res.data.startups ?? []))
       .catch(() => {});
   }, []);
 
-  // Fetch "Newly Added" Startups (last 3 days)
   useEffect(() => {
     setLoadingNew(true);
     axios.get("/api/startups?newlyAdded=true&limit=10")
@@ -347,36 +470,28 @@ export default function Home() {
       .finally(() => setLoadingNew(false));
   }, []);
 
-  // Fetch a random quote
   useEffect(() => {
     axios.get("https://dummyjson.com/quotes/random")
       .then((res) => setQuote(res.data))
-      .catch(() => {
-        setQuote({ quote: "The best way to predict the future is to create it.", author: "Peter Drucker" });
-      });
+      .catch(() => setQuote({ quote: "The best way to predict the future is to create it.", author: "Peter Drucker" }));
   }, []);
 
-  // Main Fetch Logic
   const fetchStartups = async (pageNum, reset = false) => {
     if (reset) setLoading(true);
     else setLoadingMore(true);
-
     try {
       const params = new URLSearchParams();
       params.append("page", pageNum);
       if (category !== "all") params.append("category", category);
       if (submittedQuery) params.append("search", submittedQuery);
-
       const res = await axios.get(`/api/startups?${params.toString()}`);
       const data = res.data;
-
       setTotalItems(data.totalItems);
       setHasMore(data.hasMore);
-
       if (reset) setStartups(data.startups);
       else setStartups((prev) => [...prev, ...data.startups]);
       setError("");
-    } catch (err) {
+    } catch {
       setError("Failed to load startups.");
     } finally {
       setLoading(false);
@@ -384,14 +499,8 @@ export default function Home() {
     }
   };
 
-  useEffect(() => {
-    setPage(1);
-    fetchStartups(1, true);
-  }, [category, submittedQuery]);
-
-  useEffect(() => {
-    if (page > 1) fetchStartups(page, false);
-  }, [page]);
+  useEffect(() => { setPage(1); fetchStartups(1, true); }, [category, submittedQuery]);
+  useEffect(() => { if (page > 1) fetchStartups(page, false); }, [page]);
 
   useEffect(() => {
     const handler = (e) => { if (!searchRef.current?.contains(e.target)) setSearchFocused(false); };
@@ -405,13 +514,15 @@ export default function Home() {
   };
 
   const clearSearch = () => { setQuery(""); setSubmittedQuery(""); };
-
   const showDropdown = searchFocused && query.trim().length >= 1;
 
-  // Split advertisements for two sides
+  // Split ads for two sidebars
   const mid = Math.ceil(advertisedStartups.length / 2);
   const leftAds = advertisedStartups.slice(0, mid);
   const rightAds = advertisedStartups.slice(mid);
+
+  // Merge ads into leaderboard
+  const leaderboard = useLeaderboardWithAds(startups, advertisedStartups);
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -421,13 +532,12 @@ export default function Home() {
       </div>
 
       <div className="flex-1 relative">
-        {/* Desktop Sidebars */}
-        <div className="hidden xl:block fixed left-4 top-1/2 -translate-y-1/2 w-40">
-          <PromotionSidebar startups={leftAds} side="left" />
+        {/* Desktop Sidebars — wider, more readable */}
+        <div className="hidden xl:block fixed left-2 top-1/2 -translate-y-1/2 w-52 2xl:w-56">
+          <PromotionSidebar startups={leftAds} />
         </div>
-
-        <div className="hidden xl:block fixed right-4 top-1/2 -translate-y-1/2 w-40">
-          <PromotionSidebar startups={rightAds} side="right" />
+        <div className="hidden xl:block fixed right-2 top-1/2 -translate-y-1/2 w-52 2xl:w-56">
+          <PromotionSidebar startups={rightAds} />
         </div>
 
         <div className="max-w-4xl mx-auto px-4 sm:px-6 pt-10 xl:pt-0">
@@ -438,6 +548,7 @@ export default function Home() {
             </div>
           )}
 
+          {/* Hero */}
           <div className="flex flex-col items-center mt-12 sm:mt-24 gap-8 animate-in fade-in slide-in-from-top-4 duration-1000">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-100 border border-slate-200 text-slate-600 text-[13px] font-semibold tracking-tight shadow-sm">
               <span className="relative flex h-2 w-2">
@@ -446,7 +557,6 @@ export default function Home() {
               </span>
               The Directory of Bangladeshi Startups
             </div>
-
             <div className="flex flex-col items-center gap-4 text-center max-w-3xl">
               <h1 className="text-slate-900 font-bold text-4xl sm:text-5xl lg:text-6xl leading-[1.1] tracking-tight">
                 Discover the next big thing built in <span className="text-blue-600">Bangladesh</span>
@@ -455,7 +565,6 @@ export default function Home() {
                 A curated database of SaaS products, mobile apps, and digital tools. Find inspiration, support local founders, or acquire your next venture.
               </p>
             </div>
-
             <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto mt-2">
               <div ref={searchRef} className="relative flex-1 sm:flex-none sm:w-96 group">
                 <div className="flex items-center p-3 rounded-xl bg-white border border-slate-200 group-focus-within:border-blue-500 group-focus-within:ring-4 group-focus-within:ring-blue-50 transition-all duration-300 shadow-sm">
@@ -478,7 +587,6 @@ export default function Home() {
                 </button>
               </Link>
             </div>
-
             <div className="flex flex-wrap items-center justify-center gap-3 mt-2">
               <Link href="/startups" className="group flex items-center gap-2 px-4 py-2 rounded-xl bg-white border border-slate-200 hover:border-blue-200 hover:bg-blue-50 transition-all duration-300 shadow-sm">
                 <Rocket size={14} className="text-blue-500" />
@@ -508,6 +616,7 @@ export default function Home() {
             </div>
           )}
 
+          {/* For Sale */}
           {forSaleStartups.length > 0 && !submittedQuery && (
             <div className="mt-12 sm:mt-16 animate-in fade-in slide-in-from-bottom-2 duration-500">
               <div className="flex items-center justify-between mb-4">
@@ -526,6 +635,7 @@ export default function Home() {
             </div>
           )}
 
+          {/* Newly Added */}
           {!submittedQuery && (newlyAddedStartups.length > 0 || loadingNew) && (
             <div className="mt-10 sm:mt-12 animate-in fade-in slide-in-from-bottom-3 duration-700">
               <div className="flex items-center gap-2 mb-4">
@@ -559,13 +669,16 @@ export default function Home() {
             </div>
           )}
 
+          {/* Leaderboard */}
           <div className="mt-16 sm:mt-20 mb-20 animate-in fade-in slide-in-from-bottom-4 duration-1000">
             <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
               <div className="flex items-center gap-2">
                 <TrendingUp size={15} className="text-slate-500" />
-                <span className="text-sm font-semibold text-slate-700">{submittedQuery ? "Search Results" : "All Startups"}</span>
+                <span className="text-sm font-semibold text-slate-700">
+                  {submittedQuery ? "Search Results" : "All Startups"}
+                </span>
                 {!loading && <span className="text-xs text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">{totalItems}</span>}
-                {loading && <div className="h-5 bg-slate-200 rounded-full w-8 animate-pulse"></div>}
+                {loading && <div className="h-5 bg-slate-200 rounded-full w-8 animate-pulse" />}
               </div>
               <div className="relative">
                 <select value={category} onChange={(e) => setCategory(e.target.value)}
@@ -578,9 +691,9 @@ export default function Home() {
             </div>
 
             {loading && startups.length === 0 && (
-               <div className="flex flex-col gap-2 sm:hidden">
-                 {Array.from({ length: 5 }).map((_, idx) => <StartupMobileCardSkeleton key={idx} />)}
-               </div>
+              <div className="flex flex-col gap-2 sm:hidden">
+                {Array.from({ length: 5 }).map((_, idx) => <StartupMobileCardSkeleton key={idx} />)}
+              </div>
             )}
 
             {error && <div className="text-sm text-red-500 bg-red-50 border border-red-200 rounded-lg px-4 py-3">{error}</div>}
@@ -593,8 +706,9 @@ export default function Home() {
               </div>
             )}
 
-            {startups.length > 0 && (
+            {leaderboard.length > 0 && (
               <>
+                {/* Desktop table with injected ad rows */}
                 <div className="hidden sm:block overflow-x-auto rounded-xl border border-slate-300">
                   <table className="table w-full">
                     <thead>
@@ -607,50 +721,78 @@ export default function Home() {
                       </tr>
                     </thead>
                     <tbody>
-                      {startups.map((startup, idx) => (
-                        <tr key={startup._id} onClick={() => window.location.href = `/startups/${toSlug(startup.name)}`}
-                          className="border-b border-slate-100 bg-slate-50 hover:bg-slate-100 transition-colors cursor-pointer">
-                          <td className="pl-4 py-3 text-sm text-slate-400 font-mono w-10 align-top pt-4">{idx + 1}</td>
-                          <td className="py-3">
-                            <div className="flex items-start gap-3">
-                              <LogoSquare src={startup.logoUrl} name={startup.name} />
-                              <div className="flex flex-col gap-0.5 min-w-0">
-                                <div className="flex items-center gap-2 flex-wrap">
-                                  <span className="text-sm font-semibold text-slate-800 leading-tight">{startup.name}</span>
-                                  {startup.currentRank && <RankBadgeSmall rank={startup.currentRank} />}
-                                  {startup.forSale && <ForSaleBadge />}
+                      {leaderboard.map((startup, idx) => {
+                        if (startup._isAd) {
+                          return <AdTableRow key={`ad-${startup._id}-${idx}`} startup={startup} />;
+                        }
+                        // Organic rank number — exclude ad rows from count
+                        const organicIdx = leaderboard.slice(0, idx + 1).filter(s => !s._isAd).length - 1;
+                        return (
+                          <tr key={startup._id}
+                            onClick={() => window.location.href = `/startups/${toSlug(startup.name)}`}
+                            className="border-b border-slate-100 bg-slate-50 hover:bg-slate-100 transition-colors cursor-pointer">
+                            <td className="pl-4 py-3 text-sm text-slate-400 font-mono w-10 align-top pt-4">{organicIdx + 1}</td>
+                            <td className="py-3">
+                              <div className="flex items-start gap-3">
+                                <LogoSquare src={startup.logoUrl} name={startup.name} />
+                                <div className="flex flex-col gap-0.5 min-w-0">
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <span className="text-sm font-semibold text-slate-800 leading-tight">{startup.name}</span>
+                                    {startup.currentRank && <RankBadgeSmall rank={startup.currentRank} />}
+                                    {startup.forSale && <ForSaleBadge />}
+                                  </div>
+                                  {startup.description && (
+                                    <span className="text-xs text-slate-400 leading-relaxed">
+                                      {startup.description.length > 37 ? startup.description.slice(0, 37) + "..." : startup.description}
+                                    </span>
+                                  )}
                                 </div>
-                                {startup.description && (
-                                  <span className="text-xs text-slate-400 leading-relaxed">
-                                    {startup.description.length > 37 ? startup.description.slice(0, 37) + "..." : startup.description}
-                                  </span>
-                                )}
                               </div>
-                            </div>
-                          </td>
-                          <td className="py-3 align-top pt-4">
-                            <div className="flex items-center gap-2 w-fit" onClick={(e) => { e.stopPropagation(); window.location.href = `/founder/${startup.userId}`; }}>
-                              <Avatar src={startup.founder?.image} name={startup.founder?.name} size={28} />
-                              <span className="text-sm text-slate-600 hover:text-slate-900 hover:underline transition-colors cursor-pointer">{startup.founder?.name ?? "Unknown"}</span>
-                            </div>
-                          </td>
-                          <td className="py-3 align-top pt-4">
-                            <span className="text-xs text-slate-500 bg-slate-100 px-2.5 py-1 rounded-full">{CATEGORY_LABELS[startup.category] ?? startup.category}</span>
-                          </td>
-                          <td className="py-3 pr-4 text-right align-top pt-4">
-                            <div className="flex items-center justify-end gap-1.5 text-slate-500">
-                              <Heart size={13} className="text-slate-400" />
-                              <span className="text-sm tabular-nums">{startup.likes ?? 0}</span>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
+                            </td>
+                            <td className="py-3 align-top pt-4">
+                              <div className="flex items-center gap-2 w-fit"
+                                onClick={(e) => { e.stopPropagation(); window.location.href = `/founder/${startup.userId}`; }}>
+                                <Avatar src={startup.founder?.image} name={startup.founder?.name} size={28} />
+                                <span className="text-sm text-slate-600 hover:text-slate-900 hover:underline transition-colors cursor-pointer">
+                                  {startup.founder?.name ?? "Unknown"}
+                                </span>
+                              </div>
+                            </td>
+                            <td className="py-3 align-top pt-4">
+                              <span className="text-xs text-slate-500 bg-slate-100 px-2.5 py-1 rounded-full">
+                                {CATEGORY_LABELS[startup.category] ?? startup.category}
+                              </span>
+                            </td>
+                            <td className="py-3 pr-4 text-right align-top pt-4">
+                              <div className="flex items-center justify-end gap-1.5 text-slate-500">
+                                <Heart size={13} className="text-slate-400" />
+                                <span className="text-sm tabular-nums">{startup.likes ?? 0}</span>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
+
+                {/* Mobile cards with injected ad cards */}
                 <div className="flex flex-col gap-2 sm:hidden">
-                  {startups.map((startup, idx) => <StartupMobileCard key={startup._id} startup={{...startup, _index: idx}} idx={idx} />)}
+                  {leaderboard.map((startup, idx) => {
+                    if (startup._isAd) {
+                      return <StartupMobileCard key={`ad-${startup._id}-${idx}`} startup={startup} idx={idx} isAd />;
+                    }
+                    const organicIdx = leaderboard.slice(0, idx + 1).filter(s => !s._isAd).length - 1;
+                    return (
+                      <StartupMobileCard
+                        key={startup._id}
+                        startup={{ ...startup, _index: organicIdx }}
+                        idx={organicIdx}
+                      />
+                    );
+                  })}
                 </div>
+
                 {hasMore && (
                   <div className="flex justify-center mt-10">
                     <button onClick={() => setPage((p) => p + 1)} disabled={loadingMore}
@@ -664,6 +806,7 @@ export default function Home() {
             )}
           </div>
 
+          {/* Quote */}
           {quote && (
             <div className="mb-20 py-12 border-t border-slate-300 animate-in fade-in duration-1000">
               <div className="flex flex-col items-center text-center max-w-2xl mx-auto px-4">
@@ -672,9 +815,9 @@ export default function Home() {
                 </div>
                 <p className="text-xl sm:text-2xl font-bold text-slate-700 leading-relaxed italic">"{quote.quote}"</p>
                 <div className="mt-6 flex items-center gap-3">
-                  <div className="h-px w-8 bg-slate-300"></div>
+                  <div className="h-px w-8 bg-slate-300" />
                   <span className="text-sm font-bold text-slate-500 tracking-widest uppercase">{quote.author}</span>
-                  <div className="h-px w-8 bg-slate-300"></div>
+                  <div className="h-px w-8 bg-slate-300" />
                 </div>
               </div>
             </div>
